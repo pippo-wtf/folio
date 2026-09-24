@@ -1,32 +1,74 @@
+<div align="center">
+
 # Folio
 
-A beautiful, simple Markdown app for designers and creatives who build with AI.
-Read comfortably, write directly on the page, and highlight what matters.
-Your files stay yours. No account. No subscription.
+### A beautiful place for your Markdown.
 
-## Get Folio
+Read the brief. Refine the idea. Highlight what matters.
 
-[Download the Mac preview](https://github.com/pippo-wtf/folio/releases/tag/v0.12.3).
-Open the disk image and drag **Folio** into **Applications**. To update, quit Folio
-and replace the existing app. Your documents and preferences stay in place.
+**[Download for Mac](https://github.com/pippo-wtf/folio/releases/download/v0.12.3/Folio.dmg)** · [Features](#features) · [Installation](#installation)
 
-Apple silicon · macOS 14 or later. This early preview is not yet signed and
-notarized by Apple, so macOS may block its first launch. See [installation notes](packaging/INSTALL.txt).
+Apple silicon · macOS 14+ · Free & open source
 
-## Made for your everyday work
+</div>
 
-- Read and edit ordinary text on a beautifully typeset page.
-- Keep highlights and comments, and jump back to marked passages.
-- Enjoy a clean page with comfortable typography.
-- Save the original Markdown, copy formatted text, or export a PDF.
-- Work offline, without an account.
+## Your next step after the AI draft
 
-Enter starts a paragraph. Shift+Enter starts a new line.
-Tables, code and other complex blocks currently use the optional Source view for editing.
+The plan from Claude. The notes from Codex. The brief behind your next idea.
+Folio gives designers and creatives a comfortable place to read, question and improve them.
 
-Folio is still growing. The next step is easier visual editing of complex blocks
-and a clearer way to pass document feedback to coding agents.
+Beautiful typography. A clean page. Your own Markdown files.
+**No account. No subscription. Works offline.**
 
-[Build and contribute](CONTRIBUTING.md) · [Report a problem](https://github.com/pippo-wtf/folio/issues)
+## Features
 
-For personal layout experiments, [Folio Staging](CONTRIBUTING.md#staging) keeps all layout and preset controls.
+- **Read with room to breathe.** Expressive headings, comfortable serif text and generous spacing, with Folio’s signature Green Line look.
+- **Write where you read.** Edit ordinary text directly on the rendered page. Keep everyday formatting close with the bottom toolbar.
+- **Keep what matters.** Save highlights, add comments and jump back to marked passages from the sidebar.
+- **See more than plain text.** Render lists, checkboxes, tables, code, callouts, footnotes, equations and diagrams.
+- **Go to the source.** Switch to the underlying Markdown whenever you need it.
+- **Share something polished.** Export a PDF or copy formatted text into another app.
+- **Keep your files yours.** Open and save regular `.md` files. No proprietary library to move into.
+
+*Enter starts a paragraph. Shift+Enter starts a new line. This is an early preview: tables, code and other complex blocks currently use Source view for editing.*
+
+## Installation
+
+### Download for Mac
+
+1. **[Download Folio.dmg](https://github.com/pippo-wtf/folio/releases/download/v0.12.3/Folio.dmg).**
+2. Open it and drag **Folio** into **Applications**.
+3. Open Folio and choose a Markdown file.
+
+**All you need is an Apple silicon Mac running macOS 14 or later.**
+You don’t need Node.js, Xcode, an AI subscription or another Markdown app to run the download.
+
+> **First launch:** this preview is not yet Apple-notarized. If macOS blocks it, follow the [installation notes](packaging/INSTALL.txt). Only open a download you trust.
+
+### Install with Homebrew
+
+If you already use [Homebrew](https://brew.sh), install from the Folio tap:
+
+```sh
+brew install --cask pippo-wtf/tap/folio
+```
+
+Homebrew is optional. The direct download is the simplest way to start.
+
+### Updating
+
+Quit Folio, download the new version and replace the app in Applications.
+Your documents and saved preferences stay in place. Updates are manual for now.
+For a Homebrew installation, use `brew update` followed by `brew upgrade --cask pippo-wtf/tap/folio`.
+
+## Made by Pippo
+
+Created and maintained by **[Pippo](https://github.com/pippo-wtf)** for designers and creatives who build with AI.
+
+Found something that needs attention? [Report a problem](https://github.com/pippo-wtf/folio/issues).
+
+For building from source and working with the separate configuration edition, see [Development](DEVELOPMENT.md).
+These tools are only needed for development, not for using Folio.
+
+Folio is free and open source under the **[MIT License](LICENSE)**.
+Bundled fonts and libraries retain their own licenses, included with the app.
