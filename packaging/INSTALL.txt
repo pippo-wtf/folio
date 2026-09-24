@@ -1,15 +1,17 @@
-Folio — a calm place to read, write and review Markdown.
+Folio for Mac
 
 1. Drag Folio into Applications.
 2. If Folio is already installed, quit it and choose Replace.
 3. Open Folio from Applications.
 
 Requires an Apple silicon Mac with macOS 14 or later.
-This early preview is not Apple-notarized. macOS may block its first launch.
-Only proceed if you trust this download. Apple provides an Open Anyway option
-in System Settings > Privacy & Security after a blocked launch.
 
-Your documents and saved preferences are separate from the app and remain when
-replacing it. Updates are manual for now; there is no automatic updater.
+For a signed release with in-app updates, Folio checks for availability and
+shows release notes. It downloads and installs only after you choose Update.
+You can also choose Check for Updates in the Folio menu. If this is a local
+development preview, use a newer installer to replace it manually.
+
+Your documents, recovery copies, highlights, and saved preferences are
+separate from the app and remain when replacing it.
 
 https://github.com/pippo-wtf/folio

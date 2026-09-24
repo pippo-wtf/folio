@@ -3,7 +3,7 @@ node_modules/
 dist/
 .DS_Store
 
-# Private working notes; only release images are published.
+# Private working notes; publish only reviewed product documentation and images.
 docs/*
 !docs/images/
 .env
@@ -14,3 +14,8 @@ docs/*
 # Historical logo experiments
 packaging/Icon-*.png
 packaging/Folio.iconset/
+
+!docs/UPDATES.md
+!docs/EDIT-JOURNAL.md
+!docs/WRITE-MODE.md
+!docs/DEVELOPMENT-TICKETS.md

@@ -13,7 +13,10 @@ enum BuildChannel {
             } else { UserDefaults.standard.set(value, forKey: key) }
         }
     }
-    #if FOLIO_STAGING
+    #if FOLIO_UPDATE_TEST
+    static let name = "Folio Update Test"
+    static let storage = "Folio Update Test"
+    #elseif FOLIO_STAGING
     static let name = "Folio Staging"
     static let storage = "Folio Staging"
     #else

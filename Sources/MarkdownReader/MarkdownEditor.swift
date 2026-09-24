@@ -36,7 +36,7 @@ struct MarkdownEditor: NSViewRepresentable {
         init(_ model: ReaderModel) { self.model = model }
         func textDidChange(_ notification: Notification) {
             guard let view = notification.object as? NSTextView else { return }
-            model.text = view.string
+            model.sourceEditorDidChange(view.string)
         }
     }
 }

@@ -1,0 +1,20 @@
+<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Folio Staging</title>
+        <item>
+            <title>0.13.0</title>
+            <pubDate>Thu, 24 Sep 2026 16:40:30 +0200</pubDate>
+            <sparkle:version>2026092402</sparkle:version>
+            <sparkle:shortVersionString>0.13.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <sparkle:releaseNotesLink sparkle:edSignature="Lpf2SaW9t+QgxKix8QGvQ1OFNr8QOhadc+9hfLtol3Qw6gZHk1DdRSf5s/XL24GML5kfxoesyMEmdMzULKTaDQ==" sparkle:length="449">https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.md</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.zip" length="5459160" type="application/octet-stream" sparkle:edSignature="dgnJsuFD3UqemFUd3E7azLU2ZIXktCu6qbmKmylWNssWwc9poMWMvDxAvxUHAD0FJiU3Oq7RWlqOGivtVSbmAA=="></enclosure>
+        </item>
+    </channel>
+</rss><!-- sparkle-signatures:
+edSignature: zU+KkxqlE1GrVfKnIPpD8vlqBa5JNDFlvwKHZrizFjskZPRPsJXd2xiuqZI7QR5uSZdxNRHQ6qCV7BSR9AxSBw==
+length: 1439
+-->

@@ -7,6 +7,10 @@ test('headings are unique including collisions with generated suffixes',()=>{
  assert.equal(new Set(result.headings.map(x=>x.id)).size,4);
  assert.equal(result.headings[3].title,'日本語');
 });
+test('heading suffix allocation keeps explicit and generated collisions stable',()=>{
+ const source='# Same\n# Same-1\n# Same\n# Same-1\n# Same\n# Same-1-1\n';
+ assert.deepEqual(parse(source).headings.map(heading=>heading.id),['same','same-1','same-2','same-1-1','same-3','same-1-1-1']);
+});
 test('raw HTML cannot become executable markup',()=>{
  const result=parse(readFileSync('Fixtures/Hostile.md','utf8'));
  assert.ok(!result.html.includes('<script>'));

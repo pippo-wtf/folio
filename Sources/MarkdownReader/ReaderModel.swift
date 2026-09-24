@@ -106,6 +106,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     @Published var recentDocuments: [RecentDocument] = (UserDefaults.standard.data(forKey: "recentDocumentsV1").flatMap { try? JSONDecoder().decode([RecentDocument].self, from: $0) }) ?? []
     var readingPositions: [String: ReadingPosition] = (UserDefaults.standard.data(forKey: "readingPositionsV1").flatMap { try? JSONDecoder().decode([String: ReadingPosition].self, from: $0) }) ?? [:]
     var started = false
+    var pendingStartupURL: URL?
+    var recoveryStartupReady = false
+    var recoveryPromptReady = false
+    var recoveryDecisionInterrupted = false
     private var pendingPosition: ReadingPosition?
     func saveReadingPosition(_ position: ReadingPosition, token: String) {
         guard token == highlightToken, fileURL != nil, !loading, !writing,
@@ -117,6 +121,17 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     @Published var title = "Folio"
     @Published var subtitle = "A quiet place for your words"
     @Published var text = "" { didSet { scheduleRecovery() } }
+    private let editJournal = EditJournalStore(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("\(BuildChannel.storage)/EditJournal"))
+    private var journalKey: String?
+    private var journaledText: String?
+    private var journalBlocked = false
+    private var journalBlockingMessage: String?
+    private var journalTask: Task<Void, Never>?
+    private var pendingJournalKind: EditJournalStore.Kind?
+    private var pendingJournalPassage: String?
+    private var lastJournalPassage: String?
+    private var sourceHistoryOperation = false
+    private var lastExportedJournal: (key: String, fingerprint: String)?
     private var recoveryTask: Task<Void, Never>?
     private var recoveryReadable = true
     private let draftStore = DraftStore(url: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("\(BuildChannel.storage)/Recovery/draft.json"))
@@ -127,8 +142,86 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             self?.flushRecovery()
         }
     }
+    private func journalFailure(_ failure: Error) {
+        journalBlocked = true
+        journalTask?.cancel(); journalTask = nil
+        lastErrorCode = "edit_journal_failed"
+        journalBlockingMessage = "The source edit history could not be updated: \(failure.localizedDescription) Your text is still here. Export Feedback if available, then use Clear Exported Edit History to retry."
+        error = journalBlockingMessage
+    }
+    private func reassertJournalFailure() {
+        guard journalBlocked, let journalBlockingMessage else { return }
+        if let current = error {
+            if current != journalBlockingMessage && !current.contains(journalBlockingMessage) {
+                error = current + " " + journalBlockingMessage
+            }
+        } else {
+            error = journalBlockingMessage
+        }
+    }
+    private func stopJournalTracking() {
+        journalTask?.cancel(); journalTask = nil
+        journalKey = nil; journaledText = nil; journalBlocked = false; journalBlockingMessage = nil
+        pendingJournalKind = nil; pendingJournalPassage = nil; lastJournalPassage = nil
+        lastExportedJournal = nil
+    }
+    private func beginJournalTracking(_ source: String) {
+        journalTask?.cancel(); journalTask = nil
+        journalKey = editJournalKey; journaledText = nil; journalBlocked = false; journalBlockingMessage = nil
+        pendingJournalKind = nil; pendingJournalPassage = nil; lastJournalPassage = nil
+        lastExportedJournal = nil
+        do {
+            try editJournal.recordExternalGap(for: editJournalKey, observedText: source)
+            journaledText = source
+        } catch { journalFailure(error) }
+    }
+    private func queueJournal(_ kind: EditJournalStore.Kind, passage: String? = nil) {
+        guard journalKey == editJournalKey else { return }
+        if journalBlocked { reassertJournalFailure(); return }
+        guard journaledText != nil else { return }
+        if let pendingJournalKind,
+           pendingJournalKind != kind || (kind == .renderedEdit && pendingJournalPassage != passage) {
+            guard flushEditJournal() else { return }
+        }
+        pendingJournalKind = kind; pendingJournalPassage = passage
+        journalTask?.cancel()
+        journalTask = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(500)) } catch { return }
+            self?.flushEditJournal()
+        }
+    }
+    @discardableResult func flushEditJournal() -> Bool {
+        journalTask?.cancel(); journalTask = nil
+        guard let key = journalKey else { return true }
+        guard !journalBlocked, let before = journaledText else { return false }
+        guard before != text else { pendingJournalKind = nil; pendingJournalPassage = nil; return true }
+        let kind = pendingJournalKind ?? (writing ? .sourceEdit : .renderedEdit)
+        let passage = pendingJournalPassage
+        do {
+            try editJournal.record(for: key, from: before, to: text, kind: kind,
+                coalesceRenderedEdits: kind == .renderedEdit && passage != nil && passage == lastJournalPassage)
+            journaledText = text
+            lastJournalPassage = kind == .renderedEdit ? passage : nil
+            pendingJournalKind = nil; pendingJournalPassage = nil
+            return true
+        } catch { journalFailure(error); return false }
+    }
+    private func recordJournalTransition(from before: String, to after: String, kind: EditJournalStore.Kind) {
+        guard let key = journalKey else { return }
+        if journalBlocked { pendingJournalKind = .unrecordedTransition; return }
+        do {
+            try editJournal.record(for: key, from: before, to: after, kind: kind)
+            journaledText = after; lastJournalPassage = nil
+            pendingJournalKind = nil; pendingJournalPassage = nil
+        } catch { journalFailure(error) }
+    }
+    func sourceEditorDidChange(_ updated: String) {
+        guard writing, !loading, !sourceHistoryOperation, updated != text else { return }
+        text = updated
+        queueJournal(.sourceEdit)
+    }
     func flushRecovery() {
-        guard recoveryReadable else { return }
+        guard recoveryStartupReady, recoveryReadable else { return }
         do {
             if dirty { try draftStore.save(RecoveryDraft(text: text, title: title, originalPath: fileURL?.path)) }
             else { try draftStore.clear() }
@@ -140,14 +233,30 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             let alert = NSAlert(); alert.messageText = "Recover unsaved writing?"
             alert.informativeText = "Folio found a local draft of ‘\(draft.title)’. It will open as a recovered copy so the original cannot be overwritten accidentally."
             alert.addButton(withTitle: "Recover Draft"); alert.addButton(withTitle: "Discard Draft")
-            if alert.runModal() == .alertFirstButtonReturn {
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                generation += 1; monitor?.invalidate(); loading = false
+                if fileScope { fileURL?.stopAccessingSecurityScopedResource() }; fileScope = false
+                if folderScope { grantedFolder?.stopAccessingSecurityScopedResource() }; folderScope = false
+                fileURL = nil; grantedFolder = nil; imagesAllowed = false; snapshot = nil
+                assetHandler.document = nil; assetHandler.root = nil
+                documentID = UUID(); marked = []; headings = []
                 isWelcome = false; untitledKey = "folio:draft:" + UUID().uuidString
-                baseline = ""; title = draft.title + " — Recovered"; text = draft.text; writing = false; render()
+                baseline = ""; title = draft.title + " — Recovered"; writing = false
+                beginJournalTracking("")
+                text = draft.text
+                recordJournalTransition(from: "", to: draft.text, kind: .sourceEdit)
+                render()
                 if let path = draft.originalPath { error = "Recovered from \(path). Use Save As to keep this draft." }
                 return true
             }
-            try draftStore.clear()
-        } catch { recoveryReadable = false; self.error = "The recovery file could not be read. It has not been replaced." }
+            if response == .alertSecondButtonReturn {
+                try draftStore.clear()
+            } else {
+                recoveryDecisionInterrupted = true
+                self.error = "The recovery choice was interrupted. Your local draft is still saved. Restart Folio to try recovery again."
+            }
+        } catch { recoveryDecisionInterrupted = true; recoveryReadable = false; self.error = "The recovery file could not be read. It has not been replaced." }
         return false
     }
     private var sourceEntry: String?
@@ -155,9 +264,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         didSet {
             guard oldValue != writing else { return }
             pageEditTime = .distantPast
-            if writing { sourceEntry = text }
+            if writing { flushEditJournal(); sourceEntry = text }
             else {
                 if let before = sourceEntry, before != text { pageUndo.append(before); trimPageHistory(); pageRedo = [] }
+                flushEditJournal()
                 sourceEntry = nil; render()
             }
         }
@@ -169,6 +279,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     weak var editor: NSTextView?
     func confirmLeave() -> Bool {
         flushRecovery()
+        _ = flushEditJournal()
         guard dirty else { return true }
         let alert = NSAlert(); alert.messageText = "Save changes to ‘\(title)’?"
         alert.informativeText = "Your changes have not been saved to the Markdown file."
@@ -182,15 +293,19 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     func newDocument() {
         guard confirmLeave() else { return }
         baseline = text
-        showWelcome()
+        showWelcome(trackJournal: false)
         isWelcome = false; untitledKey = "folio:draft:" + UUID().uuidString
         marked = []; headings = []
         text = ""; baseline = ""; snapshot = nil; title = "Untitled"; writing = false
+        beginJournalTracking("")
         documentID = UUID(); render()
     }
     @discardableResult func save(asCopy: Bool = false) -> Bool {
         guard !loading else { return false }
+        if journalKey == nil { beginJournalTracking(text) }
+        _ = flushEditJournal()
         let previousHighlightKey = highlightKey
+        let previousJournalKey = journalKey
         let previousMarks = marked
         do {
             if !asCopy, let url = fileURL, let snapshot {
@@ -225,6 +340,18 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                     }
                 } catch { self.error = "The document was saved, but its highlights could not be copied. The original review history is still stored locally." }
             }
+            do {
+                let destinationKey = highlightKey
+                if previousJournalKey != destinationKey {
+                    if let previousJournalKey {
+                        try editJournal.copyIfAbsent(from: previousJournalKey, to: destinationKey)
+                    }
+                    try editJournal.recordExternalGap(for: destinationKey, observedText: text)
+                    journalKey = destinationKey; journaledText = text; lastJournalPassage = nil
+                }
+                try editJournal.record(for: destinationKey, from: text, to: text, kind: .save)
+            } catch { journalFailure(error) }
+            reassertJournalFailure()
             recordRevision(); monitor?.invalidate(); startMonitor(); render()
             return true
         } catch { self.error = error.localizedDescription; return false }
@@ -263,6 +390,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     private var isWelcome = true
     private var untitledKey = "folio:draft:" + UUID().uuidString
     private var highlightKey: String { fileURL?.standardizedFileURL.resolvingSymlinksInPath().path ?? (isWelcome ? "folio:welcome" : untitledKey) }
+    private var editJournalKey: String { fileURL?.standardizedFileURL.resolvingSymlinksInPath().path ?? untitledKey }
 
     func saveHighlights(_ records: [SavedHighlight], token: String) {
         guard token == highlightToken, highlightsReadable, HighlightStore.valid(records) else { return }
@@ -309,12 +437,73 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     }
     func exportFeedback() {
         guard fileURL != nil else { error = "Save this document before exporting its feedback."; return }
+        let flushed = flushEditJournal()
+        let key = highlightKey
+        let journal: EditJournalStore.Journal
+        let packet: Data
+        do {
+            journal = try editJournal.load(for: key)
+            let complete = flushed && journal.headRevision == EditJournalStore.revision(text)
+            let annotations = try highlightStore.feedback(for: key, currentText: text, draft: dirty)
+            guard var object = try JSONSerialization.jsonObject(with: annotations) as? [String: Any] else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+            let edits = try JSONSerialization.jsonObject(with: encoder.encode(journal))
+            object["sourceEdits"] = edits
+            object["journalComplete"] = complete
+            object["currentTextUnjournaled"] = !complete
+            packet = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
+        } catch {
+            self.error = "Feedback could not be prepared: \(error.localizedDescription) Your saved comments and edit history are unchanged."
+            return
+        }
         let panel = NSSavePanel(); panel.allowedContentTypes = [.json]
         panel.nameFieldStringValue = title + "-feedback.json"
-        panel.message = "Contains this document’s highlighted passages, comments and review history. Share this file with an agent when you want it to read your feedback."
+        panel.message = "Contains local highlights, comments and source edit history. Share it with an agent when you want it to read your feedback."
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        do { try highlightStore.feedback(for: highlightKey, currentText: text, draft: dirty).write(to: url, options: .atomic) }
-        catch { self.error = "Feedback could not be exported. Your saved comments are unchanged." }
+        do {
+            try packet.write(to: url, options: .atomic)
+            lastExportedJournal = (key, try journalFingerprint(journal))
+            if !flushed || journal.headRevision != EditJournalStore.revision(text) {
+                error = "Feedback was exported, but the current draft has an unjournaled change. The JSON flags this gap. Clear exported edit history to retry recording it."
+            }
+        } catch { self.error = "Feedback could not be exported. Your saved comments and edit history are unchanged." }
+    }
+    private func journalFingerprint(_ value: EditJournalStore.Journal) throws -> String {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        return EditJournalStore.revision(String(decoding: try encoder.encode(value), as: UTF8.self))
+    }
+    func clearExportedEditJournal() {
+        guard let key = journalKey else { error = "Open a document before clearing its edit history."; return }
+        let existing: EditJournalStore.Journal?
+        do { existing = try editJournal.load(for: key) } catch { existing = nil }
+        if let existing, !existing.events.isEmpty {
+            guard let exported = lastExportedJournal,
+                  exported.key == key,
+                  (try? journalFingerprint(existing)) == exported.fingerprint else {
+                error = "Export Feedback first, then clear this document’s edit history. The current history has not been cleared."
+                return
+            }
+        }
+        let alert = NSAlert()
+        alert.messageText = existing == nil ? "Clear damaged edit history?" : "Clear exported edit history?"
+        alert.informativeText = existing == nil
+            ? "The journal cannot be read or exported. Clearing it permanently removes the damaged local file. Your Markdown document and highlights stay in place."
+            : "This removes this document’s local source edit events. Keep your exported feedback file if you need the old history."
+        alert.addButton(withTitle: "Clear Edit History"); alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let previousText = journaledText ?? text
+        let previousKind: EditJournalStore.Kind = journalBlocked ? .unrecordedTransition :
+            (pendingJournalKind ?? (writing ? .sourceEdit : .renderedEdit))
+        do {
+            try editJournal.clear(for: key)
+            beginJournalTracking(previousText)
+            if previousText != text {
+                pendingJournalKind = previousKind
+                if flushEditJournal() { error = nil }
+            } else if !journalBlocked { error = nil }
+        } catch { journalFailure(error) }
     }
     func highlightSelection() { script("highlightSelection", []) }
 
@@ -344,7 +533,11 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         return true
     }
     func load(_ url: URL) {
+        // LaunchServices may deliver a file before the window appears. Recovery
+        // must be decided before loading that clean file can clear a crash draft.
+        guard recoveryStartupReady else { pendingStartupURL = url; return }
         guard confirmLeave() else { return }
+        stopJournalTracking()
         isWelcome = false
         baseline = ""; snapshot = nil; writing = false; documentID = UUID()
         generation += 1
@@ -364,6 +557,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                 let content = try await Task.detached { try DocumentSnapshot(url: url) }.value
                 guard generation == current else { return }
                 snapshot = content; text = content.text; baseline = text; loading = false
+                beginJournalTracking(content.text)
                 pendingPosition = readingPositions[highlightKey] ?? ReadingPosition(heading: "", offset: 0, fraction: 0)
                 rememberDocument(url); render()
                 recordRevision(); startMonitor()
@@ -374,8 +568,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             }
         }
     }
-    func showWelcome() {
+    func showWelcome(trackJournal: Bool = true) {
         guard confirmLeave() else { return }
+        stopJournalTracking()
+        if trackJournal { untitledKey = "folio:draft:" + UUID().uuidString }
         isWelcome = true
         writing = false; snapshot = nil; documentID = UUID()
         generation += 1; highlightToken = ""; highlightsReadable = false; marked = []; monitor?.invalidate()
@@ -386,6 +582,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         title = "Folio"; subtitle = "A quiet place for your words"; error = nil; loading = false
         text = (try? String(contentsOf: Bundle.module.url(forResource: "Welcome", withExtension: "md", subdirectory: "Resources")!, encoding: .utf8)) ?? "# Welcome to Folio\n\nOpen a Markdown file to start reading."
         baseline = text
+        if trackJournal { beginJournalTracking(text) }
         pendingPosition = ReadingPosition(heading: "", offset: 0, fraction: 0)
         render()
     }
@@ -425,9 +622,15 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                     if content.bytes != snapshot?.bytes { self.error = SaveError.conflict.localizedDescription }
                     loading = false; recordRevision(); return
                 }
+                if content.text != text {
+                    _ = flushEditJournal()
+                    let previous = text
+                    recordJournalTransition(from: previous, to: content.text, kind: .externalReload)
+                }
                 snapshot = content
                 if content.text != text { text = content.text; baseline = text; documentID = UUID(); render() }
-                error = nil; loading = false; recordRevision()
+                if !journalBlocked { error = nil }
+                loading = false; recordRevision()
             } catch {
                 guard current == generation else { return }
                 loading = false; recordRevision()
@@ -442,6 +645,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             if error != nil { Task { @MainActor in self?.error = "The reading view couldn’t update. Try opening the document again."; self?.lastErrorCode = "render_failed" } }
         }
     }
+    func acceptComplexEditorState(token: String, active: Bool) {
+        guard token == highlightToken else { return }
+        (webView as? FolioWebView)?.complexEditorActive = active
+    }
     private var pageUndo: [String] = []
     private var pageRedo: [String] = []
     private var pageEditTime = Date.distantPast
@@ -451,14 +658,46 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         while pageUndo.count > 100 || pageUndo.reduce(0, { $0 + $1.utf8.count }) > 16_000_000 { pageUndo.removeFirst() }
     }
     func undoEdit() {
-        if writing { editor?.undoManager?.undo(); return }
+        if let view = webView as? FolioWebView, view.complexEditorActive {
+            view.evaluateJavaScript("document.execCommand('undo')")
+            return
+        }
+        if writing {
+            _ = flushEditJournal()
+            let before = text
+            sourceHistoryOperation = true
+            editor?.undoManager?.undo()
+            sourceHistoryOperation = false
+            let after = editor?.string ?? text
+            if after != before { text = after; recordJournalTransition(from: before, to: after, kind: .undo) }
+            return
+        }
         guard !loading, let previous = pageUndo.popLast() else { return }
-        pageEditTime = .distantPast; pageRedo.append(text); text = previous; render()
+        _ = flushEditJournal()
+        let before = text
+        pageEditTime = .distantPast; pageRedo.append(text); text = previous
+        recordJournalTransition(from: before, to: previous, kind: .undo); render()
     }
     func redoEdit() {
-        if writing { editor?.undoManager?.redo(); return }
+        if let view = webView as? FolioWebView, view.complexEditorActive {
+            view.evaluateJavaScript("document.execCommand('redo')")
+            return
+        }
+        if writing {
+            _ = flushEditJournal()
+            let before = text
+            sourceHistoryOperation = true
+            editor?.undoManager?.redo()
+            sourceHistoryOperation = false
+            let after = editor?.string ?? text
+            if after != before { text = after; recordJournalTransition(from: before, to: after, kind: .redo) }
+            return
+        }
         guard !loading, let next = pageRedo.popLast() else { return }
-        pageEditTime = .distantPast; pageUndo.append(text); trimPageHistory(); text = next; render()
+        _ = flushEditJournal()
+        let before = text
+        pageEditTime = .distantPast; pageUndo.append(text); trimPageHistory(); text = next
+        recordJournalTransition(from: before, to: next, kind: .redo); render()
     }
     func acceptRenderedEdit(before: String, text updated: String, token: String, passage: String) {
         guard token == highlightToken, !loading, !writing else { return }
@@ -467,13 +706,19 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             render(); return
         }
         if updated != text {
+            if pendingJournalKind != nil &&
+               (pendingJournalKind != .renderedEdit || pendingJournalPassage != passage) {
+                _ = flushEditJournal()
+            }
             let now = Date()
             if now.timeIntervalSince(pageEditTime) > 0.7 || pageEditPassage != passage { pageUndo.append(text); trimPageHistory() }
             pageEditTime = now; pageEditPassage = passage; pageRedo = []; text = updated
+            queueJournal(.renderedEdit, passage: passage)
         }
     }
     func render() {
         highlightToken = UUID().uuidString
+        (webView as? FolioWebView)?.complexEditorActive = false
         var records: [SavedHighlight] = []
         do { records = try highlightStore.load(for: highlightKey); highlightsReadable = true }
         catch {

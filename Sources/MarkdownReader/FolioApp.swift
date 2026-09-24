@@ -5,6 +5,7 @@ import AppKit
 struct FolioApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var model = ReaderModel.shared
+    @StateObject private var updater = FolioUpdater()
     var body: some Scene {
         Window(BuildChannel.name, id: "reader") {
             ReaderView(model: model)
@@ -13,6 +14,10 @@ struct FolioApp: App {
         }
         .defaultSize(width: 960, height: 780)
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { updater.checkForUpdates() }
+                    .disabled(!updater.canCheckForUpdates)
+            }
             CommandGroup(replacing: .newItem) {
                 Button("New Document") { model.newDocument() }.keyboardShortcut("n")
                 Button("Open Markdown…") { model.open() }.keyboardShortcut("o")
@@ -65,6 +70,12 @@ struct FolioApp: App {
         NSWindow.allowsAutomaticWindowTabbing = false
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        // Wait for the application and document window to become active before
+        // presenting crash recovery. A modal alert during launch can abort.
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(400)) {
+            ReaderModel.shared.recoveryPromptReady = true
+            ReaderModel.shared.startReading()
+        }
     }
     func application(_ application: NSApplication, open urls: [URL]) {
         if let url = urls.first { ReaderModel.shared.load(url) }

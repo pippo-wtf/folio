@@ -8,6 +8,7 @@ struct ReaderView: View {
     @Environment(\.colorScheme) private var systemScheme
 
     @State private var isDropTargeted: Bool = false
+    @State private var sidebarSelection: String?
     @FocusState private var findFieldFocused: Bool
 
     private var columnVisibility: Binding<NavigationSplitViewVisibility> {
@@ -52,7 +53,7 @@ struct ReaderView: View {
     // MARK: - Sidebar
 
     private var outlineSidebar: some View {
-        List {
+        List(selection: $sidebarSelection) {
             Section("Contents") {
                 if model.headings.isEmpty {
                     Text("No headings in this document")
@@ -61,21 +62,17 @@ struct ReaderView: View {
                         .padding(.vertical, 6)
                 }
                 ForEach(model.headings, id: \.id) { heading in
-                    Button {
-                        model.navigate(id: heading.id)
-                    } label: {
-                        Text(heading.title)
-                            .font(headingFont(for: heading.level))
-                            .foregroundStyle(headingColor(for: heading.level))
-                            .lineLimit(2)
-                            .truncationMode(.tail)
-                            .padding(.vertical, 5)
-                            .padding(.leading, CGFloat(max(0, heading.level - 1)) * 12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+                    Text(heading.title)
+                    .font(headingFont(for: heading.level))
+                    .foregroundStyle(headingColor(for: heading.level))
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                    .padding(.vertical, 5)
+                    .padding(.leading, CGFloat(max(0, heading.level - 1)) * 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                     .accessibilityLabel("\(heading.title), heading level \(heading.level)")
+                    .tag("heading:" + heading.id)
                 }
             }
             Section {
@@ -88,12 +85,10 @@ struct ReaderView: View {
                 }
                 ForEach(model.marked, id: \.id) { mark in
                     VStack(alignment: .leading, spacing: 6) {
-                        Button { model.navigateHighlight(id: mark.id) } label: {
-                            HStack(alignment: .top, spacing: 9) {
-                                Rectangle().fill(Color(red: 44.0/255, green: 1, blue: 5.0/255).opacity(0.5)).frame(width: 3, height: 30)
-                                Text(mark.preview).font(.system(size: 13)).lineLimit(2).multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                        }.buttonStyle(.plain).accessibilityLabel("Jump to marked text: \(mark.preview)")
+                        HStack(alignment: .top, spacing: 9) {
+                            Rectangle().fill(Color(red: 44.0/255, green: 1, blue: 5.0/255).opacity(0.5)).frame(width: 3, height: 30)
+                            Text(mark.preview).font(.system(size: 13)).lineLimit(2).multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading)
+                        }.accessibilityLabel("Marked text: \(mark.preview)")
                         if let comment = mark.comment { Text(comment).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(3) }
                         Button(mark.comment == nil ? "Comment…" : "Edit comment…") { model.commentOnHighlight(mark.id) }
                             .font(.system(size: 11)).buttonStyle(.borderless)
@@ -102,6 +97,7 @@ struct ReaderView: View {
                         Button(mark.comment == nil ? "Add Comment…" : "Edit Comment…") { model.commentOnHighlight(mark.id) }
                         Button("Remove Highlight", role: .destructive) { model.removeHighlight(mark.id) }
                     }.help(mark.comment ?? mark.quote)
+                    .tag("mark:" + mark.id)
                 }
             } header: {
                 HStack {
@@ -112,6 +108,14 @@ struct ReaderView: View {
             }
         }
         .listStyle(.sidebar)
+        .onChange(of: sidebarSelection) { _, selection in
+            guard let selection else { return }
+            if selection.hasPrefix("heading:") { model.navigate(id: String(selection.dropFirst(8))) }
+            else if selection.hasPrefix("mark:") { model.navigateHighlight(id: String(selection.dropFirst(5))) }
+        }
+        .onChange(of: model.documentID) { _, _ in sidebarSelection = nil }
+        .scrollIndicators(.hidden)
+        .overlay { SidebarScrollIndicator(width: CGFloat(model.layout.scrollbarWidth)).accessibilityHidden(true) }
         .scrollContentBackground(.hidden)
         .navigationTitle("Document")
         .frame(minWidth: 220, idealWidth: 250)
@@ -364,6 +368,7 @@ struct ReaderView: View {
                 Button(model.preparingPrint ? "Preparing PDF…" : "Export PDF…") { model.exportPDF() }.disabled(model.preparingPrint || model.loading)
                 Divider()
                 Button("Export Feedback…") { model.exportFeedback() }
+                Button("Clear Exported Edit History…") { model.clearExportedEditJournal() }
                 Button("Export Diagnostics…") {
                     model.exportDiagnostics()
                 }

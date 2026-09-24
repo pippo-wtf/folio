@@ -10,7 +10,9 @@ public struct DraftStore {
     public init(url: URL) { self.url = url }
     public func load() throws -> RecoveryDraft? {
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-        let data = try Data(contentsOf: url)
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        let data = try handle.read(upToCount: 64_000_001) ?? Data()
         guard data.count <= 64_000_000 else { throw CocoaError(.fileReadCorruptFile) }
         return try JSONDecoder().decode(RecoveryDraft.self, from: data)
     }

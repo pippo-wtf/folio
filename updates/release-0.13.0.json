@@ -1,0 +1,59 @@
+{
+  "version": "0.13.0",
+  "build": "2026092402",
+  "state": "local candidate; GitHub assets and feeds not published",
+  "sourceBinding": {
+    "path": "Sources/MarkdownReader/ReaderModel.swift",
+    "sha256": "06af987d263173a504cc0117a6713729763c02bf567c8afbef0a0f3a5c94fd22"
+  },
+  "notarization": {
+    "publicApp": "c3af01c0-37ae-4251-a521-0b744bf0d4b4",
+    "stagingApp": "85921b6e-f68f-47d1-8a10-ba72e7722b9c",
+    "publicDMG": "92044ff9-22ec-4e0a-aec7-847ce9690b23"
+  },
+  "public": {
+    "feed": {
+      "path": "updates/public.xml",
+      "bytes": 1544,
+      "sha256": "35cf24ad2d82d029f1ea8752e9b603c49d883ca61e7f495c77789f69382f8afd",
+      "intendedURL": "https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/public.xml"
+    },
+    "installer": {
+      "path": "dist/Folio.dmg",
+      "bytes": 10369305,
+      "sha256": "8837c86445e39fd4eb0283cef556bc3e93223f4fa884b37eecf18c9095ed37e7"
+    },
+    "updateArchive": {
+      "path": "dist/update-public/Folio-0.13.0.dmg",
+      "bytes": 10369305,
+      "sha256": "8837c86445e39fd4eb0283cef556bc3e93223f4fa884b37eecf18c9095ed37e7",
+      "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.dmg"
+    },
+    "releaseNotes": {
+      "path": "dist/update-public/Folio-0.13.0.md",
+      "bytes": 625,
+      "sha256": "1a8f06417ae4bd002e220bbb7852039f1edf96c0f240f9a93857bb56c3bc99c4",
+      "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.md"
+    }
+  },
+  "staging": {
+    "feed": {
+      "path": "updates/staging.xml",
+      "bytes": 1583,
+      "sha256": "2c3ca9e2afb62f05f8b63adfc76bff26de74efe3d31200746211a63e49f26fb3",
+      "intendedURL": "https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/staging.xml"
+    },
+    "updateArchive": {
+      "path": "dist/update-staging/Folio-Staging-0.13.0.zip",
+      "bytes": 5459160,
+      "sha256": "da8b0a8fcbd06a3b26064fb832aeb6fbf81820cd4c36f1e6c12b61f872e75a17",
+      "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.zip"
+    },
+    "releaseNotes": {
+      "path": "dist/update-staging/Folio-Staging-0.13.0.md",
+      "bytes": 449,
+      "sha256": "f841e54f344b491ff53e06fb047db4606bcf538ed48ea7270229548144ead3fc",
+      "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.md"
+    }
+  }
+}

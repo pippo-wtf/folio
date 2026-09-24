@@ -8,6 +8,7 @@ let restoring=false,diagramWork=Promise.resolve();
 const send=message=>window.webkit?.messageHandlers.folio.postMessage(message);
 window.Folio={
  highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,
+ updateCode(index,text){if(Number.isInteger(index)&&index>=0&&index<codes.length)codes[index]=text;},
  finishExport(){
   document.querySelectorAll('.print-keep').forEach(el=>el.replaceWith(...el.childNodes));
   const root=document.getElementById('document');if(root.dataset.restoreEditing){root.contentEditable='true';delete root.dataset.restoreEditing;}
@@ -64,7 +65,7 @@ window.Folio={
   }
   document.getElementById('document').innerHTML=result.html;
   document.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false;}));
-  setupEditing(markdown,result.blocks,highlightToken,editing,send);
+  setupEditing(markdown,result.blocks,result.complexBlocks,assetPrefix,highlightToken,editing,send);
   restoreHighlights(highlightToken,highlights,canSaveHighlights);
   if(caret){
    const host=document.getElementById('document');

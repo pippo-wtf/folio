@@ -10,16 +10,20 @@ zsh scripts/package.sh
 zsh scripts/installer.sh
 ```
 
-Builds always replace `dist/Folio.app` and `dist/Folio.dmg`. They do not create
-another version-named app. Version numbers remain in the app metadata for support.
+Public builds replace `dist/Folio.app` and `dist/Folio.dmg`. Staging builds
+replace `dist/Folio Staging.app`. The disposable update-test channel writes
+only under `/private/tmp`. These builds do not create another version-named app. Version numbers remain in the app metadata for support.
 The current script builds for the host architecture; the initial download is Apple silicon.
 
 Quit the installed app before replacing it. Copy `dist/Folio.app` into Applications.
-Do not delete user preferences or support data when updating. Automatic updates are not implemented.
+Do not delete user preferences or support data when updating. Local preview
+builds keep the updater inactive. The signed release workflow and isolated
+older-to-newer test are described in [Update delivery](docs/UPDATES.md).
 
-The package script signs locally with an ad-hoc identity. Public stable distribution
-still requires a Developer ID certificate, hardened-runtime signing and Apple
-notarization. Never commit certificates, signing passwords or notarization credentials.
+The default package script signs locally with an ad-hoc identity. Distribution
+uses Developer ID, the hardened runtime, EdDSA-signed update feeds and Apple
+notarization. `scripts/notarize.sh` submits only when called explicitly. Never
+commit certificates, private keys, signing passwords or notarization credentials.
 
 The Markdown renderer is in `web/`, the Mac app in `Sources/`, and the preview
 extension in `QuickLook/`. The bundle step generates offline renderer resources

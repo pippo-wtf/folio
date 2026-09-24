@@ -29,6 +29,7 @@ final class LocalAssets: NSObject, WKURLSchemeHandler {
 }
 final class FolioWebView: WKWebView {
     var editHistory: ((Bool) -> Void)?
+    var complexEditorActive = false
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers?.lowercased() == "z" {
             editHistory?(event.modifierFlags.contains(.shift)); return true
@@ -82,6 +83,10 @@ struct ReaderWebView: NSViewRepresentable {
             guard message.frameInfo.isMainFrame, let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
             switch type {
             case "ready": model.ready = true; model.render()
+            case "complexEditorState":
+                if let token = body["token"] as? String, let active = body["active"] as? Bool {
+                    model.acceptComplexEditorState(token: token, active: active)
+                }
             case "editDocument":
                 if let before = body["before"] as? String, let updated = body["text"] as? String, let token = body["token"] as? String {
                     model.acceptRenderedEdit(before: before, text: updated, token: token, passage: body["passage"] as? String ?? "")
@@ -128,6 +133,7 @@ struct ReaderWebView: NSViewRepresentable {
         }
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             model.ready = false
+            (webView as? FolioWebView)?.complexEditorActive = false
             model.error = "The reading view stopped. Close this window and reopen Folio to recover. Your file is unchanged."
         }
     }

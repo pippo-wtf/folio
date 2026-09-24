@@ -34,9 +34,15 @@ extension ReaderModel {
         readingPositions = [:]
     }
     func startReading() {
-        guard !started else { return }; started = true
+        guard recoveryPromptReady, !started else { return }; started = true
+        let recovered = restoreRecovery()
+        if recoveryDecisionInterrupted { return }
+        recoveryStartupReady = true
+        let requestedURL = pendingStartupURL
+        pendingStartupURL = nil
+        if recovered { return }
+        if let requestedURL { load(requestedURL); return }
         guard fileURL == nil, text.isEmpty else { return }
-        if restoreRecovery() { return }
         if let item = recentDocuments.first { openRecent(item) } else { showWelcome() }
     }
 }
