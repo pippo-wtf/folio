@@ -44,9 +44,22 @@ li>p{margin-bottom:.55em}
 li>:last-child{margin-bottom:0}
 li>ul,li>ol{margin:.4em 0}
 ul{list-style:disc}ul ul{list-style:circle}ul ul ul{list-style:square}
-.task-list-item{list-style:none;margin-left:-1.35em;padding-left:0}
-.task-list-item-checkbox{accent-color:var(--accent);width:.85em;height:.85em;margin:0 .6em 0 0;vertical-align:-.08em}
-.task-list-item-checkbox:disabled{opacity:.85;filter:none}
+/* Match the reading font, align with the column, and center on the first line.
+   Native inputs otherwise use a small system font even when body text is enlarged. */
+.task-list-item{position:relative;list-style:none;margin-left:-1.35em;padding-left:1.6em}
+.task-list-item-checkbox{
+ -webkit-appearance:none;appearance:none;font:inherit;position:absolute;left:0;
+ top:calc((1lh - 1em)/2);width:1em;height:1em;margin:0;
+ display:inline-grid;place-content:center;border:1.5px solid var(--muted);border-radius:.16em;
+ background:var(--paper);color:var(--accent-ink);opacity:1;
+}
+.task-list-item-checkbox:checked{background:var(--accent);border-color:var(--accent)}
+.task-list-item-checkbox:checked::after{
+ content:"";width:.48em;height:.27em;border-left:.1em solid currentColor;border-bottom:.1em solid currentColor;
+ transform:translateY(-.06em) rotate(-45deg);
+}
+.task-list-item-checkbox:disabled{opacity:1;filter:none}
+@media print{.task-list-item-checkbox{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 blockquote{border-left:3px solid var(--accent);margin:2.1em 0;padding:.1em 0 .1em 1em;color:var(--ink);font-style:italic}
 blockquote>:last-child{margin-bottom:0}
 /* Flat tables belong to the document, not a separate card. */
