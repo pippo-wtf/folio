@@ -1,20 +1,23 @@
-<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+<?xml version="1.0" standalone="yes"?>
+<!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+-->
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>Folio Staging</title>
         <item>
             <title>0.13.0</title>
             <pubDate>Thu, 24 Sep 2026 17:19:38 +0200</pubDate>
-            <sparkle:version>2026092404</sparkle:version>
+            <sparkle:version>2026092407</sparkle:version>
             <sparkle:shortVersionString>0.13.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <sparkle:releaseNotesLink sparkle:edSignature="JVJrUpq4nfNjaqz+RyxxK3VVqINlJX4Xi8JvqJHPsKY+GGt3JHfK46M6HXfyrF1GTahTsUg5hVhxoBKLVYXVBg==" sparkle:length="450">https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.md</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.zip" length="5510409" type="application/octet-stream" sparkle:edSignature="oqhNv3i/8+0LW+T5DjY0d7fKbat0JlulkRmlVVD5b1glVHdly7nxKO0ccHh2FQmadfbiPrnAaspaNpI8Q0mzBw=="></enclosure>
+            <sparkle:releaseNotesLink sparkle:edSignature="pxz+UlH31PW6zyUOSFT6lDdG2hDeKDCAdHanFuaijtdVaNctiz606EYavKJ/BLvOGZXdD05rOgVJHHh9sDjVCA==" sparkle:length="550">https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/Folio-Staging-0.13.0.md</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.zip" length="5515053" type="application/octet-stream" sparkle:edSignature="pDZv9oNAMbHLxZVRo5VNO4o8xgpuDbGM94xaYAv5J1spMGd2klAGOcps5B4608i15fQ82MBQ2uDnhK1UUsPTCg=="/>
         </item>
     </channel>
-</rss><!-- sparkle-signatures:
-edSignature: B4KP6g+BXX3ggsJqZe6pw46dYXRqM5UCwXvOyfFG4x9eu+owT8c3qKAgeQ9TxCGnbKssExTYlp+HLK5hF4BtAg==
-length: 1439
+</rss>
+<!-- sparkle-signatures:
+edSignature: 6E/TnXkfvyzi3S00nJ/wRePbK5x5oKVvm/xdON7ohvOxAMoELwGd3WoLLfSE6pANqQyI/BeWKC3rgtnDLL1JDA==
+length: 1425
 -->

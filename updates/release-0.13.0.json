@@ -1,72 +1,123 @@
 {
   "version": "0.13.0",
-  "build": "2026092404",
-  "state": "local candidate; GitHub assets and feeds not published",
+  "build": "2026092407",
+  "state": "verified release artifacts; see GitHub tags for publication",
+  "sourceRevision": "e1ebb19ae3af5c4e2f77d6eda9ea54ac478b8b9b",
   "sourceBinding": {
-    "Sources/MarkdownReader/ReaderModel.swift": "06af987d263173a504cc0117a6713729763c02bf567c8afbef0a0f3a5c94fd22",
+    "Package.resolved": "44370a704a00901a505e56fe2542eee70322f33ca1812a2d72a85544d1e8da74",
+    "Package.swift": "b87bcb1278c90e1ad8f56a51e9b3309fc313c8a61a704a6d3c4031865d62fa68",
+    "QuickLook/Info.plist": "68f1c750134b43c2d7591c8dfbe07f2266059b0ad060efc3d26e89d84b14f2f3",
+    "QuickLook/Preview.entitlements": "20431ce3705d44daec678705701ddeb1512c808268e6eca9515a71a5bd8cbef6",
+    "QuickLook/PreviewViewController.swift": "01baf012ea9ade97ac099d8d59948050a133594aab99e3af53a5c64f7f20607e",
+    "Sources/MarkdownReader/BuildChannel.swift": "002f333f0a7220bce877944ada802afffcd051db91c54cb72d4094e19e204f47",
     "Sources/MarkdownReader/DefaultMarkdownApp.swift": "d27925eb5ba1e834fda83fbca5c06ade0d6a7088ff5fa9f40d0eb582a942f510",
     "Sources/MarkdownReader/FolioApp.swift": "a0aeece9d3e6823d17741ed1a5e04f90dc7bfb975f2f1c58bcd42c309ec412cf",
-    "Sources/MarkdownReader/FolioUpdater.swift": "f45573ee64f7aa52bd357f279ad9dfb66800f9d39dc1c666f8c8101e66f1a491",
     "Sources/MarkdownReader/FolioUpdateDriver.swift": "5540007e19736298be20b17dcde2e89bda6a7293d8b91922b3d499cff285dbaa",
+    "Sources/MarkdownReader/FolioUpdater.swift": "f45573ee64f7aa52bd357f279ad9dfb66800f9d39dc1c666f8c8101e66f1a491",
+    "Sources/MarkdownReader/LayoutEditor.swift": "4d370b981ccb16d83fef1dff096923f9410ec069d1f559935bf2be49bbc59c4b",
+    "Sources/MarkdownReader/MarkdownEditor.swift": "d35bebc62ed3865b9df33d35cd8dbf449b4bd91dc3baecda31ae2bdfb9d07a99",
+    "Sources/MarkdownReader/PresetMenu.swift": "122dd94dc61dd5ec7862ca1d227cae54c0fd88e325253ee1de726fc2f0f36835",
+    "Sources/MarkdownReader/ReaderModel.swift": "d70c0b15f38ac0089c2a24b32e67e8cf05d5c21c24fcb6edec05f53c158bad87",
+    "Sources/MarkdownReader/ReaderView.swift": "5090c100b9fef286f21f62c258559b4a938aebdaabbef9228b6492fc40aafe07",
+    "Sources/MarkdownReader/ReaderWebView.swift": "158dee98de1e00c035b691eba7e703d6b4528865a80928cbdfc551136ee30346",
+    "Sources/MarkdownReader/ReadingHistory.swift": "3c2a036fd7153cbb281dab8c33d9a6b0f8915d9ba2df817c62de0115a975305f",
+    "Sources/MarkdownReader/Resources/Fonts/Oswald-OFL.txt": "0fd731a904b729a4e02eaf5e8ebd06783edd9abe400e8882760160230675b652",
+    "Sources/MarkdownReader/Resources/Fonts/Oswald.ttf": "5b38c246e255a12f5712d640d56bcced0472466fc68983d2d0410ec0457c2817",
+    "Sources/MarkdownReader/Resources/Fonts/SourceSerif4-Italic.ttf": "15fbc7e4679489a501998c3669272637a6646388ef7e4bd77eebb5bf967a1f42",
+    "Sources/MarkdownReader/Resources/Fonts/SourceSerif4-OFL.txt": "5f94c3fd3a23131a417ab5a0c8452de57e70c3cfb9f604d88241f7065ebf9fd9",
+    "Sources/MarkdownReader/Resources/Fonts/SourceSerif4.ttf": "97b2d4da6e3cb494b5a1e66ae176914d852ccabef49e0c02c0df25f3e39aca0b",
+    "Sources/MarkdownReader/Resources/InitialAppearance.json": "c34f157da200fe1ab1b8cc86d23bc79615421c6922397d7885900e5847e4a2c5",
+    "Sources/MarkdownReader/Resources/THIRD_PARTY.txt": "3d77c332915c884bae08c443c3f98b6ea12c2f48c8e82240e2358fc051742f6e",
+    "Sources/MarkdownReader/Resources/Welcome.md": "d49d6dc142e12d4438ef1766b7eb8de2b2b043e6e51de452c2312cedebafe52d",
+    "Sources/MarkdownReader/Resources/math.css": "8dcd6e5fdde79b1861a89612963f55ebc6b0a67b46c3d6bb486a2f607128d2d6",
+    "Sources/MarkdownReader/Resources/reader.css": "edb052fef11d52f3fe27f74fef060d891b4c0afd4f4e91f773324d4d2f1fd08a",
+    "Sources/MarkdownReader/Resources/reader.js": "787a8ee61b14d646eaf38302321416a7fb9afbac32cf452f120a455e94990600",
+    "Sources/MarkdownReader/SidebarScrollIndicator.swift": "2f851d0d0efd8a384f586390addfb13516b1c4528fd2ef6b52369e7d126bd385",
+    "Sources/MarkdownReader/WindowChrome.swift": "5e2caf12ae6342573014fe767be01bc0463b85afbfede0a72e087aa4a68987d2",
+    "Sources/ReaderCore/DocumentReader.swift": "28ed5772c6639f1ace0ad11b35ea7a2cdfa600066aec8dbe07cfcdd9504da38d",
+    "Sources/ReaderCore/DocumentSnapshot.swift": "4c2d48bf5b9a27db10ac064288d861597d7e88394f9b685afeeb6ea31509227f",
+    "Sources/ReaderCore/DraftStore.swift": "d46381e0fb53a60a5038bf2a4e7e4876ebb7806c71ad2a2dc1e80bb94f543438",
+    "Sources/ReaderCore/EditJournalStore.swift": "da34ecb943616d0c5625f42459249509cbb8ab9545b9fb0288c1ec83ce9e417e",
+    "Sources/ReaderCore/HighlightStore.swift": "46a45dfe6dd7c70b1d8e2f75d5ae2b0a38a6bfa50271ba8b502639718008bbe7",
+    "Sources/ReaderCore/LayoutSettings.swift": "0c034262d5a7b778ae4ed2902167df3b5abd7166c2f48e477bf26c4c0be19677",
     "Sources/ReaderCore/PersonalAppInstallation.swift": "55d63913a0ee5173a7b2cff447659d1d05dd47dc2e58a573fe681dfdc8d54dea",
+    "Sources/ReaderCore/ReadingPreset.swift": "e532c5aa55a2d3dd3c4ae9d84067225270226de26e4178612e81b6717b4a2c4c",
     "Sources/ReaderCore/UpdateConfiguration.swift": "d3b58ca14a302006fb9881ea38137fb080e66f7d85349d6f524a3584e56f5f84",
-    "packaging/InstallFolio.swift": "108466dc60e3442d22515bb2c646f46ecc73d4075c34d3de5db44d1c95151374",
-    "packaging/Info.plist": "ba4d0cb434bf2dba4c8410e6e5101b9624b85920d514c343b49f089ad694a82c",
+    "package-lock.json": "a3c354daa0197e9c99f614eb1f30ead1cf053ed82ed15fb29e956aada7737efd",
+    "package.json": "e52e8bd51e6714f2f0cdcde0e7b68b97029ea16df3a3d58c706e5dc8029610ba",
+    "packaging/Folio.entitlements": "9ba048e601c65f19c4fff82fbd1836f472387699cf91a34d655aec4e2090ebd3",
+    "packaging/Folio.icns": "01e77890e663f91784580d5cddf57cce6d6f623eaee81e45b1ffa6e7b5d61edb",
     "packaging/INSTALL.txt": "7e0fabb4b871750f72273bd7dc46402d766bfc809d2d6bf7700939972a6b196e",
-    "scripts/installer.sh": "711c6a75f20c08661954524c014dccbd9da9b8ad4b6d1709119b9ecc54c05a13",
+    "packaging/Info.plist": "b26d817048143ec889d87b0bf33bf02e3a8a545ccc6365df88748f3d07525361",
+    "packaging/InstallFolio.swift": "108466dc60e3442d22515bb2c646f46ecc73d4075c34d3de5db44d1c95151374",
+    "packaging/update-public-keys.json": "47a57ec4d91db4f571b5208143183e315a459b312bbf7bf70a0c9a92059597fc",
+    "scripts/bundle.mjs": "afbdc8f225920ad9266520c43a4d2046e5787732302d5f4d70feea740645bc35",
+    "scripts/install-local.sh": "da0c464416989cbd78140af09ab5fb864989dcf44220cda1425ead647cf5c453",
+    "scripts/installer.sh": "fbfe12d8a1f7f2e7ce611d9a2b1963ef1d4c5b71c7b64b25a837a18dac013cbe",
+    "scripts/notarize.sh": "c3d9a6edfe362985afde704e6cb17cef54a8f383a203e044e829c0ac8e4d283c",
     "scripts/package.sh": "39725c25064fc03c68fdc9db520c08744bb62ed8865a17f0cd044d3baca66105",
-    "Package.resolved": "44370a704a00901a505e56fe2542eee70322f33ca1812a2d72a85544d1e8da74"
+    "scripts/prepare-update-test.sh": "785b19b794660dd2fe9572b103c60385c539b473741729833245e2398d453cc2",
+    "scripts/verify-update-test-signatures.py": "0680185e78c7a09c6410c261940597d94735f27c680a51b48a2b4b32908802b2",
+    "web/complex-source.js": "82e4b4ed0eb4276dad6da91d66387e509aead84862a6c50e13323fc82ba76ddf",
+    "web/diagrams.js": "480d40a4f8362e2a0ee7fc1e33cbbef5ca4131e600f802d90c1fa7cac2255a4c",
+    "web/editing.js": "fe134aaf8208c873a19ad30935b0734735eb8f255b865dd2910780c6e1c2e27e",
+    "web/extensions.js": "8cb80e53162d51fe668fd236a6146886912356616ba293547fef8e7e5cf6eeef",
+    "web/highlight-anchors.js": "f8c9e3aa636cff42a1a675fbf2016f64f42d965f4aae7b2e46ae262332c0409b",
+    "web/highlights.js": "4e9374d931113b30e386ad0cd46e1bf882268fdfb16d1990e986d680782926f4",
+    "web/layout.js": "169d1e372cdc0c26bd8a6cfa68cfbf4b99fb68321db709bd2b235df792545382",
+    "web/parser.js": "2a33c518d13275d65f33480cebad98b897891ade4e95fd86642284eea9ae2162",
+    "web/reader.js": "41e19a32d94c0d5ec93a85fb642dabfaa69b696565eec203c420b2d42437cb60"
   },
   "notarization": {
-    "publicApp": "6ff45325-033e-44fb-a107-727ce4017478",
-    "stagingApp": "f57343c1-0ade-48fd-aa79-7d17a6406019",
-    "installerHelper": "f7edd5f0-c82c-4891-b1e2-4b45e659e507",
-    "publicDMG": "a2cb3374-0de1-42d1-8afe-3edcf1f56d48"
+    "publicApp": "5ffb7a90-af9e-4676-b510-e979c3ab3557",
+    "stagingApp": "70183077-e87c-4abc-a8fa-4c839a849683",
+    "installerHelper": "7b2249de-c38d-44b0-8854-c48f83952966",
+    "publicDMG": "6cf4a209-a943-474b-a148-24f5c7963c3b"
   },
   "public": {
     "feed": {
       "path": "updates/public.xml",
-      "bytes": 1543,
-      "sha256": "056f921fd9848fcef539d27741c2af4b07989d07522ca07427450e86fdfb15c9",
+      "bytes": 1537,
+      "sha256": "da2d89c2c1b181187037cc5099958ef518541ce6890d368a406fe4af628ac1ef",
       "intendedURL": "https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/public.xml"
-    },
-    "installer": {
-      "path": "dist/Folio.dmg",
-      "bytes": 10464927,
-      "sha256": "c053863db04e64fbef06c743a9c7236d0630a454d5f70788e021912a9ec942be",
-      "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio.dmg"
     },
     "updateArchive": {
       "path": "dist/update-public/Folio-0.13.0.zip",
-      "bytes": 9330936,
-      "sha256": "e830005f5880bcdeda7771423b04f858e30d6c6d3690d0897d6e2e3c3a3d45ff",
+      "bytes": 9335957,
+      "sha256": "9c6b1e8458e1cbfa58cb893a42c841895f8b523dada27e2ff13984777a6c96cd",
       "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.zip"
     },
     "releaseNotes": {
       "path": "dist/update-public/Folio-0.13.0.md",
-      "bytes": 743,
-      "sha256": "0dbce9a8e97d433bfbe05388b67bbc836e89e8678989b23577896aab825ed054",
-      "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.md"
+      "bytes": 882,
+      "sha256": "9f976f24abd45bf3736e43094c2ba84f767c6be565460d85224aa4a11dccb7dc",
+      "intendedURL": "https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/Folio-0.13.0.md"
+    },
+    "installer": {
+      "path": "dist/Folio.dmg",
+      "bytes": 10467876,
+      "sha256": "b6f3603f588187f1d7b4ecdbee682d307cf042c2d4ea315c65ac6aae57beef12",
+      "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio.dmg"
     }
   },
   "staging": {
     "feed": {
       "path": "updates/staging.xml",
-      "bytes": 1583,
-      "sha256": "c5d3fce0fcb0347b852fdcbe695f5410027e34ec65f028958625ba8c3d3cd705",
+      "bytes": 1569,
+      "sha256": "77f51aae2ae240808ceb584c16de156fe260b5b9eca24b0f4e968e10ff3fb1df",
       "intendedURL": "https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/staging.xml"
     },
     "updateArchive": {
       "path": "dist/update-staging/Folio-Staging-0.13.0.zip",
-      "bytes": 5510409,
-      "sha256": "130f9994884c989e5b8113f213a0ca3fb3e66ee2af0ba4518bc3b62ac7b84444",
+      "bytes": 5515053,
+      "sha256": "22b112d02ebc7f09c74643ed41497cb42ae5a172c53094669e438645db269c8c",
       "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.zip"
     },
     "releaseNotes": {
       "path": "dist/update-staging/Folio-Staging-0.13.0.md",
-      "bytes": 450,
-      "sha256": "ab28e075bafcc3a8eedcee7eae52d335b5c0c8c3b505609f02d2d49985f698b2",
-      "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.md"
+      "bytes": 550,
+      "sha256": "1a12cf80182c06b2bc3445da3799a20362fbe01acc553bd0230ab1ef88ef5b6d",
+      "intendedURL": "https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/Folio-Staging-0.13.0.md"
     }
   }
 }

@@ -73,7 +73,7 @@ changes. Verify the archive URL and the new build number before publishing.
 Do not use `--link` or an information-only item in place of an installable
 archive.
 
-## Prepared 0.13.0 local candidates
+## Folio 0.13.0 release
 
 `dist/Folio.app` and `dist/Folio Staging.app` are Developer ID signed, notarized,
 stapled, and accepted by Gatekeeper. `dist/Folio.dmg` is a separate public
@@ -104,18 +104,13 @@ default-app prompt, transaction, packaging, and updater are in
 
 The public appcast expects its ZIP and notes as assets on GitHub tag
 `v0.13.0`; that tag also needs `Folio.dmg` for first-time installation.
-Staging expects its ZIP and notes on `v0.13.0-staging`. These assets and
-feeds are not published yet. Preserve the exact candidate bytes in the
+Staging expects its ZIP and notes on `v0.13.0-staging`. These assets and feeds are published as the matching 2026092407 release set. Preserve the exact candidate bytes in the
 manifest; changing an archive, note, or XML requires regenerated signatures
 and hashes. Do not publish either feed before its referenced assets exist at
 the exact signed URLs.
 
 The Homebrew cask must switch to the **public app-only ZIP** for 0.13.0;
-the installer DMG now has only the helper at its root. Keep the cask and
-README on the shipped version until release approval. At that point, update
-the README Homebrew command to include `--appdir="$HOME/Applications"` so it
-matches the personal installation target. A clean-Mac installer pass and a
-published-feed upgrade remain manual release gates.
+the installer DMG now has only the helper at its root. The cask and README use the shipped release. The README Homebrew command includes `--appdir="$HOME/Applications"` so it matches the personal installation target. A clean-Mac installer pass remains unverified. The published feed is checked independently from local signing.
 
 ## Isolated local upgrade test
 

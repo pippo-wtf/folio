@@ -1,20 +1,23 @@
-<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+<?xml version="1.0" standalone="yes"?>
+<!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+-->
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>Folio</title>
         <item>
             <title>0.13.0</title>
             <pubDate>Thu, 24 Sep 2026 17:19:38 +0200</pubDate>
-            <sparkle:version>2026092404</sparkle:version>
+            <sparkle:version>2026092407</sparkle:version>
             <sparkle:shortVersionString>0.13.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <sparkle:releaseNotesLink sparkle:edSignature="AsKFdLajj136jzMTnxoGUjoB+VNThRDA0xhLsLLXF6CsspqK/0xH1VVYb6XFo8sBzK7x1BerPZqjjmoVSAvlBQ==" sparkle:length="743">https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.md</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.zip" length="9330936" type="application/octet-stream" sparkle:edSignature="lI/IV7U6+0osrhRVLdYFu7s1DMBNZl0WLazOZ4LUJssnTWlhrdp1RXjnonjOTlT1uzRHdFhVqylKkg2LOM9iDg=="></enclosure>
+            <sparkle:releaseNotesLink sparkle:edSignature="//KzaCZYm2tDMALowv1BZ3PacVNWoCsZzQKRakzTmoAyQIhzdciGc9/pUZA4JjPIBhe2cKPcuoVfT0aGVgtnAQ==" sparkle:length="882">https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/Folio-0.13.0.md</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.zip" length="9335957" type="application/octet-stream" sparkle:edSignature="xjwzgUqoJ+9Sarocjrwdl0SGh2sQ79Mlq6qH7Ic9DKqK91+HfqgO7xExn76erWz+/ZiBOQWBRYMo7PkLEMyIAg=="/>
         </item>
     </channel>
-</rss><!-- sparkle-signatures:
-edSignature: kGSmW7BcyA5Ju/zJE1LqpbTkZuvHdL6pnIfsEKOppKydQg0ZMwDW79712+UXOzaF18w5JsLcTtjJ/rC0ovZTAw==
-length: 1399
+</rss>
+<!-- sparkle-signatures:
+edSignature: M3KXlziJRj4ZaPHgc86gkFGli+WvSH2GPiDMfhGsli3CgMQ0otUqfAhmjAtFxWZ9qujElaXtHsmGWPmAVfNlAQ==
+length: 1393
 -->
