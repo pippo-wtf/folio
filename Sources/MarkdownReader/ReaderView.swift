@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct ReaderView: View {
     @ObservedObject var model: ReaderModel
+    @ObservedObject var updater: FolioUpdater
     @Environment(\.openWindow) private var openWindow
     @Environment(\.colorScheme) private var systemScheme
 
@@ -302,6 +303,13 @@ struct ReaderView: View {
         }
 
         ToolbarItemGroup {
+            if updater.updateAvailable {
+                Button("Update available - check it out") { updater.showAvailableUpdate() }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .help("See what’s new in Folio")
+            }
             Toggle(isOn: $model.editingEnabled) {
                 Label("Write", systemImage: "pencil")
                     .labelStyle(.iconOnly)

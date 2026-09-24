@@ -5,6 +5,9 @@ import SwiftUI
 
 /// Presentation only: Sparkle owns downloads, signature validation and installation.
 @MainActor final class FolioUpdateDriver: NSObject, ObservableObject, SPUUserDriver, NSWindowDelegate {
+    @Published private(set) var updateAvailable = false
+    var hasPendingDialog: Bool { primary != nil || secondary != nil }
+
     @Published var heading = "Folio updates"
     @Published var message = ""
     @Published var version = ""
@@ -31,7 +34,7 @@ import SwiftUI
             }
     }
 
-    private func present(_ title: String, _ detail: String, busy: Bool = false,
+    private func present(_ title: String, _ detail: String, busy: Bool = false, showWindow: Bool = true,
                          primaryTitle: String? = nil, primary: (() -> Void)? = nil,
                          secondaryTitle: String? = nil, secondary: (() -> Void)? = nil) {
         self.heading = title; self.message = detail; self.busy = busy; self.progress = nil
@@ -52,7 +55,7 @@ import SwiftUI
             panel.center(); window = panel
         }
         window?.standardWindowButton(.closeButton)?.isEnabled = secondary != nil
-        window?.makeKeyAndOrderFront(nil)
+        if showWindow { window?.makeKeyAndOrderFront(nil) }
     }
     func choosePrimary() {
         guard let action = primary else { return }
@@ -80,15 +83,16 @@ import SwiftUI
         present("Looking for updates", "Checking for the latest Folio.", busy: true, secondaryTitle: "Cancel", secondary: cancellation)
     }
     func showUpdateFound(with appcastItem: SUAppcastItem, state: SPUUserUpdateState, reply: @escaping (SPUUserUpdateChoice) -> Void) {
+        updateAvailable = true
         clearDetails(); version = "Folio " + appcastItem.displayVersionString
         acceptingNotes = true
         notes = Self.readableNotes(appcastItem.itemDescription ?? "")
         if notes.isEmpty { notes = appcastItem.releaseNotesURL == nil ? "No release notes were provided for this version." : "Loading release notes…" }
         let installing = state.stage == .installing
         if appcastItem.isInformationOnlyUpdate {
-            present("An update to Folio", "This version is not available for in-app installation.", secondaryTitle: "Done", secondary: { reply(.dismiss) })
+            present("An update to Folio", "This version is not available for in-app installation.", showWindow: state.userInitiated, secondaryTitle: "Done", secondary: { reply(.dismiss) })
         } else {
-            present("A little more Folio", "A new version is ready when you are.",
+            present("A little more Folio", "A new version is ready when you are.", showWindow: state.userInitiated,
                 primaryTitle: installing ? "Install & Relaunch" : "Update Folio", primary: { [weak self] in self?.acceptingNotes = false; reply(.install) },
                 secondaryTitle: installing ? "Cancel Update" : "Later", secondary: { reply(installing ? .skip : .dismiss) })
         }
@@ -106,6 +110,7 @@ import SwiftUI
         notes = "Release notes could not be loaded. You can close this window and check again later."
     }
     func showUpdateNotFoundWithError(_ error: Error, acknowledgement: @escaping () -> Void) {
+        updateAvailable = false
         clearDetails()
         present("No update available", error.localizedDescription, secondaryTitle: "Done", secondary: acknowledgement)
     }
@@ -143,6 +148,7 @@ import SwiftUI
             primaryTitle: applicationTerminated ? nil : "Continue", primary: applicationTerminated ? nil : retryTerminatingApplication)
     }
     func showUpdateInstalledAndRelaunched(_ relaunched: Bool, acknowledgement: @escaping () -> Void) {
+        updateAvailable = false
         clearDetails()
         present("You’re up to date", "The update is installed.", secondaryTitle: "Done", secondary: acknowledgement)
     }

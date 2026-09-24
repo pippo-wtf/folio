@@ -8,7 +8,7 @@ struct FolioApp: App {
     @StateObject private var updater = FolioUpdater()
     var body: some Scene {
         Window(BuildChannel.name, id: "reader") {
-            ReaderView(model: model)
+            ReaderView(model: model, updater: updater)
                 .frame(minWidth: 580, minHeight: 440)
                 .onAppear { model.startReading() }
         }

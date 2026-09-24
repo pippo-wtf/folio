@@ -138,3 +138,9 @@ Official references: [Sparkle setup](https://sparkle-project.org/documentation/)
 [customization and signed-feed policy](https://sparkle-project.org/documentation/customization/),
 [sandboxing](https://sparkle-project.org/documentation/sandboxing/), and
 [Apple local network ATS](https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowslocalnetworking).
+
+## Toolbar notification (0.13.1)
+
+A confirmed newer release shows “Update available - check it out” beside the toolbar controls. Scheduled checks keep the update dialog hidden; clicking the notification opens it with release notes. Choosing Later keeps the notification available. Nothing downloads until Update Folio is clicked, and installation still requires Install & Relaunch.
+
+Verified with the signed local Sparkle fixture: no notification before discovery; scheduled discovery shows the link without a dialog; clicking opens release notes; Later and reopening work without downloading. The Swift suite passed 42 tests. The notarized public-channel build 2026092408 was installed locally; the published 0.13.0 downloads remain unchanged.

@@ -7,11 +7,13 @@ import ReaderCore
 /// public key have been injected into Info.plist by the release packaging step.
 @MainActor
 final class FolioUpdater: ObservableObject {
+    @Published private(set) var updateAvailable = false
     @Published private(set) var canCheckForUpdates = false
     private var updater: SPUUpdater?
     private let driver = FolioUpdateDriver()
 
     init() {
+        driver.$updateAvailable.assign(to: &$updateAvailable)
         guard UpdateConfiguration.isSafe(Bundle.main.infoDictionary ?? [:]) else { return }
 
         let updater = SPUUpdater(hostBundle: .main, applicationBundle: .main, userDriver: driver, delegate: nil)
@@ -23,6 +25,12 @@ final class FolioUpdater: ObservableObject {
         self.updater = updater
         updater.publisher(for: \.canCheckForUpdates)
             .assign(to: &$canCheckForUpdates)
+    }
+
+    func showAvailableUpdate() {
+        guard updateAvailable else { return }
+        if driver.hasPendingDialog { driver.showUpdateInFocus() }
+        else { checkForUpdates() }
     }
 
     func checkForUpdates() {
