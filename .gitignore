@@ -1,0 +1,16 @@
+.build/
+node_modules/
+dist/
+.DS_Store
+
+# Private working notes; only release images are published.
+docs/*
+!docs/images/
+.env
+.env.*
+*.p12
+*.p8
+*.key
+# Historical logo experiments
+packaging/Icon-*.png
+packaging/Folio.iconset/
