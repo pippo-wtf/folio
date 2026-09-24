@@ -6,18 +6,18 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Folio</title>
         <item>
-            <title>0.13.0</title>
-            <pubDate>Thu, 24 Sep 2026 17:19:38 +0200</pubDate>
-            <sparkle:version>2026092407</sparkle:version>
-            <sparkle:shortVersionString>0.13.0</sparkle:shortVersionString>
+            <title>0.13.1</title>
+            <pubDate>Thu, 24 Sep 2026 19:44:46 +0200</pubDate>
+            <sparkle:version>2026092409</sparkle:version>
+            <sparkle:shortVersionString>0.13.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <sparkle:releaseNotesLink sparkle:edSignature="//KzaCZYm2tDMALowv1BZ3PacVNWoCsZzQKRakzTmoAyQIhzdciGc9/pUZA4JjPIBhe2cKPcuoVfT0aGVgtnAQ==" sparkle:length="882">https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/Folio-0.13.0.md</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.zip" length="9335957" type="application/octet-stream" sparkle:edSignature="xjwzgUqoJ+9Sarocjrwdl0SGh2sQ79Mlq6qH7Ic9DKqK91+HfqgO7xExn76erWz+/ZiBOQWBRYMo7PkLEMyIAg=="/>
+            <sparkle:releaseNotesLink sparkle:edSignature="0H8K1jDE09wC1TYnsJbiU3LjnbE/xuaIF9828dl4rReW96GfeLgqPTR+u6QQL6089PY0zGgyld4/OlWllwdqAg==" sparkle:length="623">https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/Folio-0.13.1.md</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.1/Folio-0.13.1.zip" length="9342625" type="application/octet-stream" sparkle:edSignature="wUY2GZMnx7SALmfQE8RCv9AfMRmIUmNSgoyF2XIoVFf6N8L5aWqK9+ytUNCbYY1w2O+Nd/5vRwojkhBGeHQzAg=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: M3KXlziJRj4ZaPHgc86gkFGli+WvSH2GPiDMfhGsli3CgMQ0otUqfAhmjAtFxWZ9qujElaXtHsmGWPmAVfNlAQ==
+edSignature: jHx+oGkN2NJIgQjrv6MnMFUjrnO2c8wiS2Y+GWN7qUOLBeQ1/8fkNAz4nE+9o2AT+SDf7JOm+UKine7aqLuiCg==
 length: 1393
 -->

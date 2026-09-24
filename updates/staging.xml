@@ -6,18 +6,18 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Folio Staging</title>
         <item>
-            <title>0.13.0</title>
-            <pubDate>Thu, 24 Sep 2026 17:19:38 +0200</pubDate>
-            <sparkle:version>2026092407</sparkle:version>
-            <sparkle:shortVersionString>0.13.0</sparkle:shortVersionString>
+            <title>0.13.1</title>
+            <pubDate>Thu, 24 Sep 2026 19:45:31 +0200</pubDate>
+            <sparkle:version>2026092409</sparkle:version>
+            <sparkle:shortVersionString>0.13.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <sparkle:releaseNotesLink sparkle:edSignature="pxz+UlH31PW6zyUOSFT6lDdG2hDeKDCAdHanFuaijtdVaNctiz606EYavKJ/BLvOGZXdD05rOgVJHHh9sDjVCA==" sparkle:length="550">https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/Folio-Staging-0.13.0.md</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.zip" length="5515053" type="application/octet-stream" sparkle:edSignature="pDZv9oNAMbHLxZVRo5VNO4o8xgpuDbGM94xaYAv5J1spMGd2klAGOcps5B4608i15fQ82MBQ2uDnhK1UUsPTCg=="/>
+            <sparkle:releaseNotesLink sparkle:edSignature="EG0MWSUFwWl6OMzE/iEShu/fTiAFJaavG43T9xXWuIt09BSBPl20M/GL03327ucZnMCX59H9v8UrvxeDD+qfAg==" sparkle:length="671">https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/Folio-Staging-0.13.1.md</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.1-staging/Folio-Staging-0.13.1.zip" length="5521253" type="application/octet-stream" sparkle:edSignature="Mm/mQmOr+oFByF7guM+xzeamOLHPc6NcwvrAMFu4q2UIfkW0esDCwnd91EDvkeVMGjREi8eFe9efw9jJiYC8Dg=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 6E/TnXkfvyzi3S00nJ/wRePbK5x5oKVvm/xdON7ohvOxAMoELwGd3WoLLfSE6pANqQyI/BeWKC3rgtnDLL1JDA==
+edSignature: /+fwBxHBO7pkxHkm0+2en6mcNTPf6m8LCPq0h92l464jYfiNvSNg6SgBsNDVoeZgUEk9X2ZLDmjh+EppVEqEAQ==
 length: 1425
 -->
