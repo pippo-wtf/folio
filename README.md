@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/images/folio-logo.png" alt="Folio logo" width="120">
+
 # Folio
 
 ### A beautiful place for your Markdown.
