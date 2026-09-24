@@ -36,10 +36,6 @@ Beautiful typography. A clean page. Your own Markdown files.
 
 ## A closer look
 
-**Beautiful text. Clear code. One calm page.**
-
-![Folio typography and JavaScript rendering — composed from two app screenshots](docs/images/folio-formatting.png)
-
 **Keep your thinking beside the text.** Saved highlights and comments stay within reach in the Marked sidebar.
 
 ![Folio with a saved passage and review comment in the sidebar](docs/images/folio-highlights.png)
