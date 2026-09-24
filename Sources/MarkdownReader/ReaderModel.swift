@@ -407,7 +407,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     }
     func startMonitor() {
         monitor = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self, let url = self.fileURL, !self.loading else { return }
                 let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
                 if values?.contentModificationDate != self.revision || values?.fileSize != self.revisionSize { self.reload() }

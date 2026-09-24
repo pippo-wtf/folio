@@ -75,7 +75,7 @@ struct ReaderWebView: NSViewRepresentable {
         guard let url = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "Resources"), let text = try? String(contentsOf: url, encoding: .utf8) else { return "" }
         return text
     }
-    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+    @MainActor final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         let model: ReaderModel
         init(_ model: ReaderModel) { self.model = model }
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
