@@ -45,7 +45,8 @@ struct LayoutEditor: View {
                         colorRow("Light Ink", \.lightInk)
                         colorRow("Dark Paper", \.darkPaper)
                         colorRow("Dark Ink", \.darkInk)
-                        colorRow("Accent", \.accent)
+                        colorRow("Light Accent", \.accent)
+                        colorRow("Dark Accent", \.darkAccent)
                     }
                     .padding(.top, 8)
                 }

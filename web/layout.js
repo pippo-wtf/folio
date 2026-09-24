@@ -8,11 +8,18 @@ export function layoutCSS(s={}) {
  const gap=n('blockGap',.5,4,2.1), scale=n('headingScale',.75,1.5,1);
  const weight=(key,family,fallback)=>n(key,family==='Oswald'||family==='Source Serif 4'?200:100,family==='Oswald'?700:900,fallback);
  const bodyWeight=weight('bodyWeight',s.bodyFont,400);
+ const darkColors=`--accent:${color(s.darkAccent,'#FF9B54')};--mark-ink:#191919;--paper:${color(s.darkPaper,'#171717')};--ink:${color(s.darkInk,'#E9E9E9')};--soft:color-mix(in srgb,var(--paper) 90%,var(--ink));--muted:color-mix(in srgb,var(--ink) 72%,var(--paper));--line:color-mix(in srgb,var(--paper) 80%,var(--ink));`;
  const rule=s.calloutStyle==='plain'?0:n('ruleWidth',0,6,3);
  return `
  :root { --paper:${color(s.lightPaper,'#FFFFFF')};--ink:${color(s.lightInk,'#191919')};--accent:${color(s.accent,'#2CFF05')}; }
- @media(prefers-color-scheme:dark){:root:not([data-appearance="light"]){--paper:${color(s.darkPaper,'#171717')};--ink:${color(s.darkInk,'#E9E9E9')};}}
- :root[data-appearance="dark"]{--paper:${color(s.darkPaper,'#171717')};--ink:${color(s.darkInk,'#E9E9E9')};}
+ @media(prefers-color-scheme:dark){:root:not([data-appearance="light"]){${darkColors}}}
+ :root[data-appearance="dark"]{${darkColors}}
+ @media(prefers-color-scheme:dark){:root:not([data-appearance="light"]){--syntax-purple:#C7AFE0;--syntax-green:#A8C9A0;--syntax-orange:#D9B58C;--syntax-blue:#A4C4D1;}}
+ :root[data-appearance="dark"]{--syntax-purple:#C7AFE0;--syntax-green:#A8C9A0;--syntax-orange:#D9B58C;--syntax-blue:#A4C4D1;}
+ .hljs-keyword,.hljs-selector-tag,.hljs-literal{color:var(--syntax-purple,#8050a0)}
+ .hljs-string,.hljs-attr{color:var(--syntax-green,#287348)}
+ .hljs-number,.hljs-symbol{color:var(--syntax-orange,#985524)}
+ .hljs-title,.hljs-built_in{color:var(--syntax-blue,#24668c)}
  body{font-family:${font(s.bodyFont)},serif;font-optical-sizing:auto;font-weight:${bodyWeight};line-height:${n('lineHeight',1.2,2,1.55)};}
  main{padding-top:${n('topInset',16,160,82)}px;padding-bottom:${n('bottomInset',24,200,132)}px;max-width:calc(${n('columnWidth',38,90,60)}ch + ${inset} * 2);padding-left:${inset};padding-right:${inset};}
  h1,h2,h3,h4,h5,h6{font-family:${font(s.headingFont)},sans-serif;font-weight:${weight('headingWeight',s.headingFont,700)};${s.headingFont==='Oswald'?'letter-spacing:0;':''}}

@@ -8,7 +8,7 @@
 
 Read the brief. Refine the idea. Highlight what matters.
 
-**[Download for Mac](https://github.com/pippo-wtf/folio/releases/download/v0.13.1/Folio.dmg)** · [Features](#features) · [Installation](#installation)
+**[Download for Mac](https://github.com/pippo-wtf/folio/releases/download/v0.13.2/Folio.dmg)** · [Features](#features) · [Installation](#installation)
 
 Apple silicon · macOS 14+ · Free & open source
 
@@ -26,7 +26,7 @@ Beautiful typography. A clean page. Your own Markdown files.
 
 ## Features
 
-- **Read with room to breathe.** Expressive headings, comfortable serif text and generous spacing, with Folio’s signature Green Line look.
+- **Read with room to breathe.** Expressive headings, comfortable serif text and generous spacing, with Folio’s signature Green Line look. Light by day; charcoal, warm text and orange accents after dark.
 - **Write where you read.** Activate the pencil to write directly on the page; turn it off to read and highlight. Keep everyday formatting close with the bottom toolbar.
 - **Keep what matters.** Save highlights, add comments and jump back to marked passages from the sidebar.
 - **See more than plain text.** Render lists, checkboxes, tables, code, callouts, footnotes, equations and diagrams.
@@ -55,7 +55,7 @@ Beautiful typography. A clean page. Your own Markdown files.
 
 ### Download for Mac
 
-1. **[Download Folio.dmg](https://github.com/pippo-wtf/folio/releases/download/v0.13.1/Folio.dmg).**
+1. **[Download Folio.dmg](https://github.com/pippo-wtf/folio/releases/download/v0.13.2/Folio.dmg).**
 2. Open it and launch **Install Folio**. It installs into your personal **Applications** folder.
 3. Open Folio and choose a Markdown file.
 

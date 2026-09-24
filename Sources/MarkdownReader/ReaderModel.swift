@@ -34,6 +34,30 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             let green = ReadingPreset(name: "Green Line", layout: layout, appearance: appearance, zoom: zoom)
             if green.isValid { persistPresets([green]); selectedPresetID = green.id }
         }
+        // Green Line owns both appearances; keep the user's typography and spacing.
+        if !UserDefaults.standard.bool(forKey: "greenLineAppearancesV1"), presetsReadable,
+           let original = presets.first(where: { $0.name == "Green Line" }) {
+            let preview = UserDefaults.standard.bool(forKey: "greenLineDarkSeededV1")
+                ? presets.first(where: { $0.name == "Green Line Dark" }) : nil
+            let usesGreenLine = layout == original.layout || layout == preview?.layout
+            var green = original
+            green.layout.darkPaper = "#2E363C"
+            green.layout.darkInk = "#D3C8AC"
+            green.layout.accent = "#2CFF05"
+            let merged = presets.filter { $0.id != preview?.id }.map { $0.id == green.id ? green : $0 }
+            if persistPresets(merged) {
+                if usesGreenLine {
+                    let currentZoom = zoom
+                    layout = green.layout
+                    if let data = try? JSONEncoder().encode(layout) {
+                        UserDefaults.standard.set(data, forKey: "readerLayoutV1")
+                    }
+                    zoom = currentZoom
+                    selectedPresetID = green.id
+                }
+                UserDefaults.standard.set(true, forKey: "greenLineAppearancesV1")
+            }
+        }
         if selectedPresetID == nil { selectedPresetID = presets.first(where: { $0.layout == layout && $0.appearance == appearance && $0.zoom == zoom })?.id }
     }
     var selectedPreset: ReadingPreset? { presets.first { $0.id == selectedPresetID } }

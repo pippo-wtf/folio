@@ -29,6 +29,19 @@ struct ReaderView: View {
         }
     }
 
+    private var isDark: Bool { colorScheme == .dark || (colorScheme == nil && systemScheme == .dark) }
+    private var inkColor: Color {
+        let hex = isDark ? model.layout.darkInk : model.layout.lightInk
+        let value = UInt32(hex.dropFirst(), radix: 16) ?? 0x191919
+        return Color(red: Double((value >> 16) & 255)/255, green: Double((value >> 8) & 255)/255, blue: Double(value & 255)/255)
+    }
+
+    private var accentColor: Color {
+        let hex = isDark ? model.layout.darkAccent : model.layout.accent
+        let value = UInt32(hex.dropFirst(), radix: 16) ?? 0x2CFF05
+        return Color(red: Double((value >> 16) & 255)/255, green: Double((value >> 8) & 255)/255, blue: Double(value & 255)/255)
+    }
+
     private var paperColor: Color {
         let dark = colorScheme == .dark || (colorScheme == nil && systemScheme == .dark)
         let hex = dark ? model.layout.darkPaper : model.layout.lightPaper
@@ -120,7 +133,8 @@ struct ReaderView: View {
         .scrollContentBackground(.hidden)
         .navigationTitle("Document")
         .frame(minWidth: 220, idealWidth: 250)
-        .background(paperColor)
+        .background(paperColor.overlay(inkColor.opacity(isDark ? 0.07 : 0)))
+        .foregroundStyle(inkColor)
     }
 
     private func headingFont(for level: Int) -> Font {
@@ -132,7 +146,7 @@ struct ReaderView: View {
     }
 
     private func headingColor(for level: Int) -> Color {
-        level <= 2 ? .primary : .secondary
+        inkColor.opacity(level <= 2 ? 1 : 0.72)
     }
 
     // MARK: - Detail
@@ -321,7 +335,7 @@ struct ReaderView: View {
                     .labelStyle(.iconOnly)
             }
             .toggleStyle(.button)
-            .tint(Color(red: 44 / 255, green: 1, blue: 5 / 255))
+            .tint(accentColor)
             .help(model.editingEnabled ? "Finish writing · switch to Read" : "Write on the page")
             .accessibilityLabel("Writing mode")
             .accessibilityValue(model.editingEnabled ? "On" : "Off")

@@ -12,10 +12,10 @@
     "bodyWeight": 400,
     "headingWeight": 700,
     "paragraphGap": 1.6,
-    "darkInk": "#E9E9E9",
+    "darkInk": "#D3C8AC",
     "headingScale": 1.4,
     "topInset": 140,
-    "darkPaper": "#171717",
+    "darkPaper": "#2E363C",
     "blockGap": 2.8000000000000003,
     "codeFont": "Menlo",
     "lineHeight": 1.55,
@@ -25,7 +25,8 @@
     "radius": 6,
     "bodySize": 28,
     "bodyFont": "Source Serif 4",
-    "bottomInset": 200
+    "bottomInset": 200,
+    "darkAccent": "#FF9B54"
   },
   "readingPresetsV1": [
     {
@@ -35,7 +36,7 @@
       "name": "Green Line",
       "layout": {
         "bodyFont": "Source Serif 4",
-        "darkPaper": "#171717",
+        "darkPaper": "#2E363C",
         "scrollbarWidth": 4,
         "headingWeight": 700,
         "calloutStyle": "rule",
@@ -59,7 +60,8 @@
         "radius": 6,
         "codeFont": "Menlo",
         "lineHeight": 1.55,
-        "darkInk": "#E9E9E9"
+        "darkInk": "#D3C8AC",
+        "darkAccent": "#FF9B54"
       }
     }
   ],

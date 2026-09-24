@@ -126,18 +126,18 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.table-scroll:focus-v
 @media(max-width:640px){main{padding:48px 24px 96px}.source-details summary{padding-left:16px}pre{padding-left:16px;padding-right:16px}}
 @media(prefers-reduced-motion:reduce){#reading-scroll-indicator{transition:none}}
 
-/* Persistent annotations use the requested green, independently of layout accent. */
-mark.folio-highlight{background:rgba(44,255,5,.5);color:inherit;padding:0;border:0;border-radius:0;box-decoration-break:clone;-webkit-box-decoration-break:clone;cursor:pointer}
+/* Annotations follow the appearance accent at 50% opacity. */
+mark.folio-highlight{background:color-mix(in srgb,var(--accent) 50%,transparent);color:var(--mark-ink,inherit);padding:0;border:0;border-radius:0;box-decoration-break:clone;-webkit-box-decoration-break:clone;cursor:pointer}
 #highlight-tools{position:fixed;z-index:1000;display:flex;gap:2px;padding:4px;border:1px solid var(--line);border-radius:5px;background:var(--paper);box-shadow:0 3px 14px #0002;font-family:var(--ui);font-size:13px;line-height:1.4}
 #highlight-tools button{min-height:30px;border:0;border-radius:2px;background:none;padding:5px 10px;font:inherit;color:var(--ink);cursor:pointer}
-#highlight-tools button:first-child{background:rgba(44,255,5,.5)}
+#highlight-tools button:first-child{background:color-mix(in srgb,var(--accent) 50%,transparent)}
 #highlight-tools button:hover{background:#2CFF05;color:#000}
 #highlight-tools button:disabled{opacity:.6;cursor:wait}
 #highlight-status{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);padding:8px 14px;border:1px solid var(--line);border-radius:3px;background:var(--paper);color:var(--ink);font:13px/1.5 var(--ui);z-index:1001;pointer-events:none}
 
 
 /* Extended writing and technical formatting. */
-mark:not(.folio-highlight){background:rgba(44,255,5,.5);color:inherit;padding:0}
+mark:not(.folio-highlight){background:color-mix(in srgb,var(--accent) 50%,transparent);color:var(--mark-ink,inherit);padding:0}
 dt{font-weight:700;margin-top:1em}dd{margin:.25em 0 1.4em 1.2em}
 sub,sup{font-size:.7em;line-height:0}
 .embed-hint,.render-status{font:13px/1.6 var(--ui);color:var(--muted)}
@@ -165,7 +165,7 @@ eqn{display:block;margin:1.6em 0;text-align:center;overflow:auto}
  thead{display:table-header-group}tr,figure,.diagram-preview{break-inside:avoid}
  details:not([open])>:not(summary){display:block!important}
  #highlight-tools,#highlight-status,#reading-scroll-indicator,button,summary{display:none!important}
- mark.folio-highlight{background:rgba(44,255,5,.5)!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+ mark.folio-highlight{background:color-mix(in srgb,var(--accent) 50%,transparent)!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
  a{color:inherit!important}svg,img{max-width:100%!important;height:auto!important}
 }
 

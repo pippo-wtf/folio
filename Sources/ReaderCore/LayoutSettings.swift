@@ -26,9 +26,10 @@ public struct LayoutSettings: Codable, Equatable {
     public var darkPaper = "#171717"
     public var darkInk = "#E9E9E9"
     public var accent = "#2CFF05"
+    public var darkAccent = "#FF9B54"
     public var calloutStyle = "rule"
     public init() {}
-    private enum CodingKeys: String, CodingKey { case bodyFont, headingFont, codeFont, bodySize, lineHeight, columnWidth, pageInset, topInset, bottomInset, paragraphGap, blockGap, headingScale, headingGap, listGap, codeSize, radius, ruleWidth, scrollbarWidth, lightPaper, lightInk, darkPaper, darkInk, accent, calloutStyle, bodyWeight, headingWeight }
+    private enum CodingKeys: String, CodingKey { case bodyFont, headingFont, codeFont, bodySize, lineHeight, columnWidth, pageInset, topInset, bottomInset, paragraphGap, blockGap, headingScale, headingGap, listGap, codeSize, radius, ruleWidth, scrollbarWidth, lightPaper, lightInk, darkPaper, darkInk, accent, darkAccent, calloutStyle, bodyWeight, headingWeight }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         bodyFont = try values.decode(String.self, forKey: .bodyFont)
@@ -54,6 +55,7 @@ public struct LayoutSettings: Codable, Equatable {
         darkPaper = try values.decode(String.self, forKey: .darkPaper)
         darkInk = try values.decode(String.self, forKey: .darkInk)
         accent = try values.decode(String.self, forKey: .accent)
+        darkAccent = try values.decodeIfPresent(String.self, forKey: .darkAccent) ?? "#FF9B54"
         calloutStyle = try values.decode(String.self, forKey: .calloutStyle)
         bodyWeight = try values.decodeIfPresent(Double.self, forKey: .bodyWeight) ?? 400
         headingWeight = try values.decodeIfPresent(Double.self, forKey: .headingWeight) ?? 700
@@ -69,7 +71,7 @@ public struct LayoutSettings: Codable, Equatable {
             (listGap,0.1...1.2),(codeSize,12...26),(radius,0...16),(ruleWidth,0...6),(scrollbarWidth,1...8)
         ]
         return numbers.allSatisfy { $0.0.isFinite && $0.1.contains($0.0) } &&
-            [lightPaper,lightInk,darkPaper,darkInk,accent].allSatisfy {
+            [lightPaper,lightInk,darkPaper,darkInk,accent,darkAccent].allSatisfy {
                 $0.range(of: "^#[0-9a-fA-F]{6}$", options: .regularExpression) != nil
             }
     }
