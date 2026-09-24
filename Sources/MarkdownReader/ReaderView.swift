@@ -300,16 +300,22 @@ struct ReaderView: View {
                 Label("Open", systemImage: "doc.badge.plus")
             }
             .help("Open a document")
+            if updater.updateAvailable {
+                HStack(spacing: 12) {
+                    Rectangle()
+                        .fill(.secondary.opacity(0.25))
+                        .frame(width: 1, height: 16)
+                        .accessibilityHidden(true)
+                    Button("Update available - check it out") { updater.showAvailableUpdate() }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .help("See what’s new in Folio")
+                }
+            }
         }
 
         ToolbarItemGroup {
-            if updater.updateAvailable {
-                Button("Update available - check it out") { updater.showAvailableUpdate() }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .help("See what’s new in Folio")
-            }
             Toggle(isOn: $model.editingEnabled) {
                 Label("Write", systemImage: "pencil")
                     .labelStyle(.iconOnly)
