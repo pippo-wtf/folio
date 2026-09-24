@@ -6,6 +6,16 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Folio Staging</title>
         <item>
+            <title>0.13.2</title>
+            <pubDate>Thu, 24 Sep 2026 22:15:21 +0200</pubDate>
+            <sparkle:version>2026092413</sparkle:version>
+            <sparkle:shortVersionString>0.13.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <sparkle:releaseNotesLink sparkle:edSignature="1lKnDL5UuFhy315EsgjCcB0GnUlVi5Iyv0fzcQhLlOtd3tRLyyHlu+DGwA0/mP+fD4sDC3NlQjlt8ScoT/JACQ==" sparkle:length="930">https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/Folio-Staging-0.13.2.md</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.2-staging/Folio-Staging-0.13.2.zip" length="5527595" type="application/octet-stream" sparkle:edSignature="RIq8l9jgo1wUEjq2tmokRNzX8vSJv3nSN8Bp3lbCzGl9BGxjQwho7umQDLagLZuqdia8IyCqYTj8MfBq5WaLAQ=="/>
+        </item>
+        <item>
             <title>0.13.1</title>
             <pubDate>Thu, 24 Sep 2026 19:45:31 +0200</pubDate>
             <sparkle:version>2026092409</sparkle:version>
@@ -18,6 +28,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: /+fwBxHBO7pkxHkm0+2en6mcNTPf6m8LCPq0h92l464jYfiNvSNg6SgBsNDVoeZgUEk9X2ZLDmjh+EppVEqEAQ==
-length: 1425
+edSignature: 2anQqhbZXMGLthDZpr8HNTv9eC6LHHYYbQg22HByrTf7/XHw/lF9wFiROo7JAQ4je+sIoYLbaNe+913sczDDCg==
+length: 2413
 -->
