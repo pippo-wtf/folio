@@ -41,12 +41,12 @@ publication require an explicit release decision.
 
 Set `CFBundleShortVersionString` in `packaging/Info.plist` and use a strictly
 increasing numeric `CFBundleVersion`. The prepared local candidate is
-`0.13.0` / `2026092403`; the shipped `0.12.3` artifact is immutable.
+`0.13.0` / `2026092404`; the shipped `0.12.3` artifact is immutable.
 
 ```sh
 FOLIO_DISTRIBUTION=1 \
 FOLIO_CODESIGN_IDENTITY='Developer ID Application: Philip Scholl (D683769MKC)' \
-FOLIO_BUILD_VERSION=2026092403 \
+FOLIO_BUILD_VERSION=2026092404 \
 zsh scripts/package.sh public
 zsh scripts/notarize.sh dist/Folio.app
 FOLIO_CODESIGN_IDENTITY='Developer ID Application: Philip Scholl (D683769MKC)' \
@@ -82,6 +82,14 @@ which carries the notarized Folio payload inside its signed Resources. The
 helper verifies both source and copied payload, then installs to the
 receiving user’s `~/Applications/Folio.app`; it does not require an
 administrator password. The outer DMG is also signed, notarized, and stapled.
+
+The update window uses Folio’s type, white background, and green action color.
+Sparkle still owns fetching, EdDSA verification, installation, and relaunch.
+In an isolated native fixture, the styled offer and ready states appeared;
+**Later** fetched no ZIP, **Cancel Update** at the ready state kept the old
+app, and a later **Install & Relaunch** upgraded build `990001` to `990002`.
+The offline error state and **Done** action were also observed. The Mac locked
+before a separate up-to-date UI check, so that check remains unverified.
 
 Sparkle uses separate app-only ZIPs, not the installer DMG:
 `dist/update-public/Folio-0.13.0.zip` and

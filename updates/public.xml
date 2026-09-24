@@ -5,16 +5,16 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Folio</title>
         <item>
             <title>0.13.0</title>
-            <pubDate>Thu, 24 Sep 2026 16:58:16 +0200</pubDate>
-            <sparkle:version>2026092403</sparkle:version>
+            <pubDate>Thu, 24 Sep 2026 17:19:38 +0200</pubDate>
+            <sparkle:version>2026092404</sparkle:version>
             <sparkle:shortVersionString>0.13.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <sparkle:releaseNotesLink sparkle:edSignature="oCa/wg1/eBoPZ/KhfXuJOMhFYN9A/irkwYuNFhMyX3WsxirACwN9HQwsh/22jbnwCu7fCgACOUKs01Pxj6/3Cg==" sparkle:length="718">https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.md</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.zip" length="9281052" type="application/octet-stream" sparkle:edSignature="rElgUCnhtY/Z2WReU97zFNSHX/o6mT3KE/Q/7I5ymzrI4xZxPQQIg/yNzJWVWsXiExvGtwhklTOn+BI4xevEBQ=="></enclosure>
+            <sparkle:releaseNotesLink sparkle:edSignature="AsKFdLajj136jzMTnxoGUjoB+VNThRDA0xhLsLLXF6CsspqK/0xH1VVYb6XFo8sBzK7x1BerPZqjjmoVSAvlBQ==" sparkle:length="743">https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.md</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.zip" length="9330936" type="application/octet-stream" sparkle:edSignature="lI/IV7U6+0osrhRVLdYFu7s1DMBNZl0WLazOZ4LUJssnTWlhrdp1RXjnonjOTlT1uzRHdFhVqylKkg2LOM9iDg=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: daGVI7NgeOPFIeHtNQqzswyZp1ftcAZAcTcc+ThBOQAg6Bf9JkWAD2am2i/4QOZ0F03a2eDJ8l9QlTIuIhNeDQ==
+edSignature: kGSmW7BcyA5Ju/zJE1LqpbTkZuvHdL6pnIfsEKOppKydQg0ZMwDW79712+UXOzaF18w5JsLcTtjJ/rC0ovZTAw==
 length: 1399
 -->

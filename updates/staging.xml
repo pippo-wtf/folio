@@ -5,16 +5,16 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Folio Staging</title>
         <item>
             <title>0.13.0</title>
-            <pubDate>Thu, 24 Sep 2026 16:58:17 +0200</pubDate>
-            <sparkle:version>2026092403</sparkle:version>
+            <pubDate>Thu, 24 Sep 2026 17:19:38 +0200</pubDate>
+            <sparkle:version>2026092404</sparkle:version>
             <sparkle:shortVersionString>0.13.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <sparkle:releaseNotesLink sparkle:edSignature="6F2WkN1QnMFWF+/QNPORRNuS5N+QJB4+6EJ+taJVF2FV1iX1Hnzat/stUHr7iqeJCQRLeDU891WcGK/desYpBQ==" sparkle:length="429">https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.md</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.zip" length="5463128" type="application/octet-stream" sparkle:edSignature="GWGn8gL5vwK9qxuBLZS96OZYIYE75qAq6EPW5kazfRPATGvXJkQvqAnboDrIrwCb5UxanI+tU+RlzxKvBH0TAA=="></enclosure>
+            <sparkle:releaseNotesLink sparkle:edSignature="JVJrUpq4nfNjaqz+RyxxK3VVqINlJX4Xi8JvqJHPsKY+GGt3JHfK46M6HXfyrF1GTahTsUg5hVhxoBKLVYXVBg==" sparkle:length="450">https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.md</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.zip" length="5510409" type="application/octet-stream" sparkle:edSignature="oqhNv3i/8+0LW+T5DjY0d7fKbat0JlulkRmlVVD5b1glVHdly7nxKO0ccHh2FQmadfbiPrnAaspaNpI8Q0mzBw=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: tAuOpdRWtJsKfZ8ODqr8Jyd4MPfcLojjb/SJgFgv7Oc6cO+Ntd/vkFah6sM88Xg5VvQzllt5qlY+DAUNAp5gDQ==
+edSignature: B4KP6g+BXX3ggsJqZe6pw46dYXRqM5UCwXvOyfFG4x9eu+owT8c3qKAgeQ9TxCGnbKssExTYlp+HLK5hF4BtAg==
 length: 1439
 -->

@@ -8,27 +8,25 @@ import ReaderCore
 @MainActor
 final class FolioUpdater: ObservableObject {
     @Published private(set) var canCheckForUpdates = false
-    private var controller: SPUStandardUpdaterController?
+    private var updater: SPUUpdater?
+    private let driver = FolioUpdateDriver()
 
     init() {
         guard UpdateConfiguration.isSafe(Bundle.main.infoDictionary ?? [:]) else { return }
 
-        let controller = SPUStandardUpdaterController(
-            startingUpdater: false,
-            updaterDelegate: nil,
-            userDriverDelegate: nil
-        )
+        let updater = SPUUpdater(hostBundle: .main, applicationBundle: .main, userDriver: driver, delegate: nil)
         // A stale preference must never opt this product into background
         // downloads. The Info.plist also forbids presenting that option.
-        controller.updater.automaticallyDownloadsUpdates = false
-        controller.startUpdater()
-        self.controller = controller
-        controller.updater.publisher(for: \.canCheckForUpdates)
+        updater.automaticallyDownloadsUpdates = false
+        do { try updater.start() }
+        catch { driver.showUpdaterError(error, acknowledgement: {}) ; return }
+        self.updater = updater
+        updater.publisher(for: \.canCheckForUpdates)
             .assign(to: &$canCheckForUpdates)
     }
 
     func checkForUpdates() {
         guard canCheckForUpdates else { return }
-        controller?.checkForUpdates(nil)
+        updater?.checkForUpdates()
     }
 }

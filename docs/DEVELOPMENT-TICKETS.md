@@ -110,3 +110,15 @@ The launch-recovery data-loss blocker was resolved and verified in disposable te
 - [ ] Full signed installation and default-association acceptance are verified on a clean Mac before public replacement.
 
 The installer is a separate non-sandboxed app inside the DMG, used only to copy the signed app into the user's home. It installs no persistent helper. Sparkle updates use a separate app-only ZIP. The existing public download and installed apps remain unchanged.
+
+## 8. Match update windows to Folio
+
+- [x] Custom Sparkle user driver uses bundled Oswald and Source Serif 4, white paper, dark ink, green `#2CFF05`, the app icon, quiet dividers and generous spacing.
+- [x] Permission, checking, offer/notes, downloading, preparation, install confirmation, completion and error use one native SwiftUI window. Notes are bounded text, not executable HTML or remote media.
+- [x] Native offer and ready/error screens visually inspected; corrected NSHostingView sizing so the window stays at its intended size.
+- [x] Later downloads no archive; Ready Cancel uses Sparkle's cancellation choice and quitting afterward left the old test build 990001 installed.
+- [x] Explicit Update → Install & Relaunch installed signed build 990002 in the isolated fixture. Strict codesign passed; three valid signatures accepted and three tampered variants rejected.
+- [x] Offline update errors use the same design and Done dismisses them.
+- [ ] Native up-to-date, permission, VoiceOver and smaller-window checks remain unverified. UI testing stopped when the Mac locked.
+
+Fixture: `/private/tmp/folio-update-test.avyQad`; the public/staging installations and public release were not replaced. The release candidate is build 2026092404.
