@@ -14,7 +14,7 @@ Apple silicon · macOS 14+ · Free & open source
 
 </div>
 
-![Folio on an Apple Studio Display — product mockup](docs/images/folio-packshot.png)
+![Folio on an Apple Studio Display — product mockup](docs/images/folio-packshot-soft.png)
 
 ## Your next step after the AI draft
 
