@@ -1,8 +1,12 @@
 Folio for Mac
 
-1. Drag Folio into Applications.
-2. If Folio is already installed, quit it and choose Replace.
-3. Open Folio from Applications.
+1. Open Install Folio in the disk image.
+2. Choose Install Folio. It uses your personal ~/Applications folder.
+   Quit an existing Folio before installing; your documents and settings stay.
+3. Folio opens and asks whether it should be your default Markdown app.
+   Choose Make Default or Not Now. You can revisit this in the Folio menu.
+
+No administrator password is needed. The shared /Applications folder is not used.
 
 Requires an Apple silicon Mac with macOS 14 or later.
 

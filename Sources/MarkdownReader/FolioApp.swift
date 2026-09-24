@@ -15,6 +15,9 @@ struct FolioApp: App {
         .defaultSize(width: 960, height: 780)
         .commands {
             CommandGroup(after: .appInfo) {
+                #if !FOLIO_STAGING && !FOLIO_UPDATE_TEST
+                Button("Make Folio Default for Markdown…") { DefaultMarkdownApp.ask() }
+                #endif
                 Button("Check for Updates…") { updater.checkForUpdates() }
                     .disabled(!updater.canCheckForUpdates)
             }
@@ -75,6 +78,7 @@ struct FolioApp: App {
         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(400)) {
             ReaderModel.shared.recoveryPromptReady = true
             ReaderModel.shared.startReading()
+            DefaultMarkdownApp.offerIfNeeded()
         }
     }
     func application(_ application: NSApplication, open urls: [URL]) {

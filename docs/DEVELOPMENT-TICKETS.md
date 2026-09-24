@@ -97,3 +97,16 @@ Signing evidence (2026-09-24): Developer ID signing, Apple notarization, staplin
 ## Remaining release checks
 
 The launch-recovery data-loss blocker was resolved and verified in disposable test build 991005. The earlier zero-valid-certificate blocker is resolved. The final candidate must match its manifest and pass clean-Mac installation before publication. VoiceOver, input-method composition, reduced-motion UI and narrow-window checks remain explicitly unverified. Final review also found a transient journal-failure warning could disappear after a later successful save; its correction now preserves/reasserts the actionable warning without blocking saves. The 39-test suite and app build passed again, and rebuilt release artifacts passed Apple notarization and local signature checks. No installation or publication was performed. Existing public release stays at 0.12.3.
+
+## 7. Install for the current user and offer the Markdown default
+
+- [x] The installer resolves the receiving user's `~/Applications` at runtime; no shared Applications shortcut or build-machine home path.
+- [x] Signed Folio payload is embedded in the installer, so macOS translocation cannot break sibling-file lookup.
+- [x] Source and copied signatures are checked before replacement; running Folio and a personal Applications symlink outside the home are rejected; failed replacement restores the prior app or preserves its backup.
+- [x] First public launch offers Make Default / Not Now; no association change on decline; the Folio menu can reopen the choice. Staging and update-test do not offer it.
+- [x] App and installer compile; 42 Swift tests pass, including isolated personal-folder install/replacement, failed-copy verification preserving the installed app, and running-app/external-folder rejection.
+- [x] Native default prompt displays Make Default / Not Now; declining persists the choice in an isolated test runner without changing file associations.
+- [x] Final signed helper launched from the mounted DMG, displayed `/Users/philip.scholl/Applications`, and Cancel exited without replacement. Helper and outer DMG passed notarization, stapling and Gatekeeper.
+- [ ] Full signed installation and default-association acceptance are verified on a clean Mac before public replacement.
+
+The installer is a separate non-sandboxed app inside the DMG, used only to copy the signed app into the user's home. It installs no persistent helper. Sparkle updates use a separate app-only ZIP. The existing public download and installed apps remain unchanged.

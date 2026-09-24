@@ -15,7 +15,11 @@ replace `dist/Folio Staging.app`. The disposable update-test channel writes
 only under `/private/tmp`. These builds do not create another version-named app. Version numbers remain in the app metadata for support.
 The current script builds for the host architecture; the initial download is Apple silicon.
 
-Quit the installed app before replacing it. Copy `dist/Folio.app` into Applications.
+Quit the installed app before replacing it. Use the disk image’s Install Folio app to install into `~/Applications`.
+The installer resolves the receiving user’s home at runtime and checks Folio’s
+Developer ID signature before replacing an existing copy. It refuses to replace
+a running Folio. Pass `FOLIO_CODESIGN_IDENTITY` to `scripts/installer.sh` to sign
+the installer helper; notarize the resulting DMG before distributing it.
 Do not delete user preferences or support data when updating. Local preview
 builds keep the updater inactive. The signed release workflow and isolated
 older-to-newer test are described in [Update delivery](docs/UPDATES.md).

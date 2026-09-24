@@ -1,38 +1,50 @@
 {
   "version": "0.13.0",
-  "build": "2026092402",
+  "build": "2026092403",
   "state": "local candidate; GitHub assets and feeds not published",
   "sourceBinding": {
-    "path": "Sources/MarkdownReader/ReaderModel.swift",
-    "sha256": "06af987d263173a504cc0117a6713729763c02bf567c8afbef0a0f3a5c94fd22"
+    "Sources/MarkdownReader/ReaderModel.swift": "06af987d263173a504cc0117a6713729763c02bf567c8afbef0a0f3a5c94fd22",
+    "Sources/MarkdownReader/DefaultMarkdownApp.swift": "d27925eb5ba1e834fda83fbca5c06ade0d6a7088ff5fa9f40d0eb582a942f510",
+    "Sources/MarkdownReader/FolioApp.swift": "a0aeece9d3e6823d17741ed1a5e04f90dc7bfb975f2f1c58bcd42c309ec412cf",
+    "Sources/MarkdownReader/FolioUpdater.swift": "10699b2e8d81560e8e8f3799a6a2117080691cd76b30e46d6236d090c39c48aa",
+    "Sources/ReaderCore/PersonalAppInstallation.swift": "55d63913a0ee5173a7b2cff447659d1d05dd47dc2e58a573fe681dfdc8d54dea",
+    "Sources/ReaderCore/UpdateConfiguration.swift": "d3b58ca14a302006fb9881ea38137fb080e66f7d85349d6f524a3584e56f5f84",
+    "packaging/InstallFolio.swift": "108466dc60e3442d22515bb2c646f46ecc73d4075c34d3de5db44d1c95151374",
+    "packaging/Info.plist": "fac9b611141318639e679b3a8ead34ba41002a511e956ee40f70bb28a3f4cd5a",
+    "packaging/INSTALL.txt": "7e0fabb4b871750f72273bd7dc46402d766bfc809d2d6bf7700939972a6b196e",
+    "scripts/installer.sh": "ef5f89155c933a9c025a34f8fffb4cb9133f623c36419e28325878425efc8379",
+    "scripts/package.sh": "39725c25064fc03c68fdc9db520c08744bb62ed8865a17f0cd044d3baca66105",
+    "Package.resolved": "44370a704a00901a505e56fe2542eee70322f33ca1812a2d72a85544d1e8da74"
   },
   "notarization": {
-    "publicApp": "c3af01c0-37ae-4251-a521-0b744bf0d4b4",
-    "stagingApp": "85921b6e-f68f-47d1-8a10-ba72e7722b9c",
-    "publicDMG": "92044ff9-22ec-4e0a-aec7-847ce9690b23"
+    "publicApp": "8cfb8c8c-23ec-4368-9215-ebd16c81ba84",
+    "stagingApp": "4ae6391c-1995-4baa-b57d-ac29abd829fb",
+    "installerHelper": "6fe5f5b7-f2b1-493f-99ef-516466f478b4",
+    "publicDMG": "21eca4a8-6ad9-48b0-8ff7-ac7508590de6"
   },
   "public": {
     "feed": {
       "path": "updates/public.xml",
-      "bytes": 1544,
-      "sha256": "35cf24ad2d82d029f1ea8752e9b603c49d883ca61e7f495c77789f69382f8afd",
+      "bytes": 1543,
+      "sha256": "095b862f2d430e4af9ecbb524f460431bdcf3be634d4c2ff85af04049e08128a",
       "intendedURL": "https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/public.xml"
     },
     "installer": {
       "path": "dist/Folio.dmg",
-      "bytes": 10369305,
-      "sha256": "8837c86445e39fd4eb0283cef556bc3e93223f4fa884b37eecf18c9095ed37e7"
+      "bytes": 10413593,
+      "sha256": "433ce76ed9f0960bcc43b7690ce067e223205fddbf9fa1b3a043deedf0a7f30d",
+      "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio.dmg"
     },
     "updateArchive": {
-      "path": "dist/update-public/Folio-0.13.0.dmg",
-      "bytes": 10369305,
-      "sha256": "8837c86445e39fd4eb0283cef556bc3e93223f4fa884b37eecf18c9095ed37e7",
-      "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.dmg"
+      "path": "dist/update-public/Folio-0.13.0.zip",
+      "bytes": 9281052,
+      "sha256": "568db699782e93eb90ffb5780cc9ca307144c837258116e717b59d5491a4d3dc",
+      "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.zip"
     },
     "releaseNotes": {
       "path": "dist/update-public/Folio-0.13.0.md",
-      "bytes": 625,
-      "sha256": "1a8f06417ae4bd002e220bbb7852039f1edf96c0f240f9a93857bb56c3bc99c4",
+      "bytes": 718,
+      "sha256": "1ce3af8ca87bdacb8752f9dbfec1d3ead1b6ff0ec3568c857f27eeeb1695a63a",
       "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio-0.13.0.md"
     }
   },
@@ -40,19 +52,19 @@
     "feed": {
       "path": "updates/staging.xml",
       "bytes": 1583,
-      "sha256": "2c3ca9e2afb62f05f8b63adfc76bff26de74efe3d31200746211a63e49f26fb3",
+      "sha256": "fa3cf1fea4fa8acc5dff331ae3f9b4bb0352062f9967e1dea90040d613fbdb5b",
       "intendedURL": "https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/staging.xml"
     },
     "updateArchive": {
       "path": "dist/update-staging/Folio-Staging-0.13.0.zip",
-      "bytes": 5459160,
-      "sha256": "da8b0a8fcbd06a3b26064fb832aeb6fbf81820cd4c36f1e6c12b61f872e75a17",
+      "bytes": 5463128,
+      "sha256": "ad60fdb17fd3299cb179657eb9b023c1f073d44645e19f1051404945aa0c432e",
       "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.zip"
     },
     "releaseNotes": {
       "path": "dist/update-staging/Folio-Staging-0.13.0.md",
-      "bytes": 449,
-      "sha256": "f841e54f344b491ff53e06fb047db4606bcf538ed48ea7270229548144ead3fc",
+      "bytes": 429,
+      "sha256": "e35487326b9f9c44327dd9001698a3574c69297f944040b497c4d72c982f2395",
       "intendedURL": "https://github.com/pippo-wtf/folio/releases/download/v0.13.0-staging/Folio-Staging-0.13.0.md"
     }
   }

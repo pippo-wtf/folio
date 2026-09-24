@@ -41,15 +41,16 @@ publication require an explicit release decision.
 
 Set `CFBundleShortVersionString` in `packaging/Info.plist` and use a strictly
 increasing numeric `CFBundleVersion`. The prepared local candidate is
-`0.13.0` / `2026092402`; the shipped `0.12.3` artifact is immutable.
+`0.13.0` / `2026092403`; the shipped `0.12.3` artifact is immutable.
 
 ```sh
 FOLIO_DISTRIBUTION=1 \
 FOLIO_CODESIGN_IDENTITY='Developer ID Application: Philip Scholl (D683769MKC)' \
-FOLIO_BUILD_VERSION=2026092402 \
+FOLIO_BUILD_VERSION=2026092403 \
 zsh scripts/package.sh public
 zsh scripts/notarize.sh dist/Folio.app
-zsh scripts/installer.sh
+FOLIO_CODESIGN_IDENTITY='Developer ID Application: Philip Scholl (D683769MKC)' \
+FOLIO_NOTARIZE_INSTALLER=1 zsh scripts/installer.sh
 codesign --force --sign 'Developer ID Application: Philip Scholl (D683769MKC)' \
   --options runtime --timestamp dist/Folio.dmg
 zsh scripts/notarize.sh dist/Folio.dmg
@@ -74,24 +75,39 @@ archive.
 
 ## Prepared 0.13.0 local candidates
 
-`dist/Folio.app`, `dist/Folio Staging.app`, and `dist/Folio.dmg` were Developer ID
-signed, notarized, stapled, and accepted by Gatekeeper. The public update
-archive `dist/update-public/Folio-0.13.0.dmg` is an exact copy of the stapled
-DMG. The staging archive `dist/update-staging/Folio-Staging-0.13.0.zip`
-contains the stapled staging app. Both archives have signed same-stem Markdown
-release notes. `updates/public.xml` and `updates/staging.xml` are separately
-signed appcasts; each feed, archive, and release note signature was verified,
-and tampered copies were rejected. The complete SHA-256 hashes, file sizes,
-intended URLs, and Apple submission IDs are in `updates/release-0.13.0.json`.
+`dist/Folio.app` and `dist/Folio Staging.app` are Developer ID signed, notarized,
+stapled, and accepted by Gatekeeper. `dist/Folio.dmg` is a separate public
+installer: its only root app is the signed and stapled `Install Folio.app`,
+which carries the notarized Folio payload inside its signed Resources. The
+helper verifies both source and copied payload, then installs to the
+receiving user’s `~/Applications/Folio.app`; it does not require an
+administrator password. The outer DMG is also signed, notarized, and stapled.
 
-The public appcast expects the DMG and notes as assets on GitHub tag
-`v0.13.0`; staging expects its ZIP and notes on `v0.13.0-staging`. These tags
-and assets are not yet published, so their URLs will not resolve until the
-release is approved and uploaded. Preserve the exact candidate bytes named
-in the manifest; changing the archive, notes, or XML requires regenerated
-signatures and hashes. Clean-Mac installation and a published-feed upgrade
-remain release gates. Do not publish either feed before its referenced assets
-are available at the exact signed URLs.
+Sparkle uses separate app-only ZIPs, not the installer DMG:
+`dist/update-public/Folio-0.13.0.zip` and
+`dist/update-staging/Folio-Staging-0.13.0.zip`. Each ZIP contains only its
+channel’s stapled app. `updates/public.xml` and `updates/staging.xml` are
+separately signed appcasts with signed same-stem Markdown release notes.
+Feed, archive, and note signatures were verified for each channel, and
+three tampered copies per channel were rejected. All SHA-256 hashes, sizes,
+intended URLs, four Apple submission IDs, and source hashes for the installer,
+default-app prompt, transaction, packaging, and updater are in
+`updates/release-0.13.0.json`.
+
+The public appcast expects its ZIP and notes as assets on GitHub tag
+`v0.13.0`; that tag also needs `Folio.dmg` for first-time installation.
+Staging expects its ZIP and notes on `v0.13.0-staging`. These assets and
+feeds are not published yet. Preserve the exact candidate bytes in the
+manifest; changing an archive, note, or XML requires regenerated signatures
+and hashes. Do not publish either feed before its referenced assets exist at
+the exact signed URLs.
+
+The Homebrew cask must switch to the **public app-only ZIP** for 0.13.0;
+the installer DMG now has only the helper at its root. Keep the cask and
+README on the shipped version until release approval. At that point, update
+the README Homebrew command to include `--appdir="$HOME/Applications"` so it
+matches the personal installation target. A clean-Mac installer pass and a
+published-feed upgrade remain manual release gates.
 
 ## Isolated local upgrade test
 
