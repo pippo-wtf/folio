@@ -302,6 +302,16 @@ struct ReaderView: View {
         }
 
         ToolbarItemGroup {
+            Toggle(isOn: $model.editingEnabled) {
+                Label("Write", systemImage: "pencil")
+                    .labelStyle(.iconOnly)
+            }
+            .toggleStyle(.button)
+            .tint(Color(red: 44 / 255, green: 1, blue: 5 / 255))
+            .help(model.editingEnabled ? "Finish writing · switch to Read" : "Write on the page")
+            .accessibilityLabel("Writing mode")
+            .accessibilityValue(model.editingEnabled ? "On" : "Off")
+            .disabled(model.loading || model.preparingPrint)
             Toggle(isOn: $model.writing) {
                 Label("Source", systemImage: "chevron.left.forwardslash.chevron.right")
             }.toggleStyle(.button).help("Show Markdown source").disabled(model.loading || model.preparingPrint)

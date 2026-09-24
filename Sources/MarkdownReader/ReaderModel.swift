@@ -260,11 +260,20 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         return false
     }
     private var sourceEntry: String?
+    // Reading and rendered writing share one page; `writing` is the optional Source view.
+    @Published var editingEnabled = false {
+        didSet {
+            guard oldValue != editingEnabled else { return }
+            _ = flushEditJournal()
+            if !editingEnabled && writing { writing = false }
+            else { render() }
+        }
+    }
     @Published var writing = false {
         didSet {
             guard oldValue != writing else { return }
             pageEditTime = .distantPast
-            if writing { flushEditJournal(); sourceEntry = text }
+            if writing { editingEnabled = true; flushEditJournal(); sourceEntry = text }
             else {
                 if let before = sourceEntry, before != text { pageUndo.append(before); trimPageHistory(); pageRedo = [] }
                 flushEditJournal()
@@ -296,7 +305,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         showWelcome(trackJournal: false)
         isWelcome = false; untitledKey = "folio:draft:" + UUID().uuidString
         marked = []; headings = []
-        text = ""; baseline = ""; snapshot = nil; title = "Untitled"; writing = false
+        text = ""; baseline = ""; snapshot = nil; title = "Untitled"; writing = false; editingEnabled = true
         beginJournalTracking("")
         documentID = UUID(); render()
     }
@@ -539,7 +548,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         guard confirmLeave() else { return }
         stopJournalTracking()
         isWelcome = false
-        baseline = ""; snapshot = nil; writing = false; documentID = UUID()
+        baseline = ""; snapshot = nil; writing = false; editingEnabled = false; documentID = UUID()
         generation += 1
         highlightToken = ""; highlightsReadable = false; marked = []
         let current = generation
@@ -573,7 +582,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         stopJournalTracking()
         if trackJournal { untitledKey = "folio:draft:" + UUID().uuidString }
         isWelcome = true
-        writing = false; snapshot = nil; documentID = UUID()
+        writing = false; editingEnabled = false; snapshot = nil; documentID = UUID()
         generation += 1; highlightToken = ""; highlightsReadable = false; marked = []; monitor?.invalidate()
         if fileScope { fileURL?.stopAccessingSecurityScopedResource() }; fileScope = false
         if folderScope { grantedFolder?.stopAccessingSecurityScopedResource() }; folderScope = false
@@ -658,6 +667,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         while pageUndo.count > 100 || pageUndo.reduce(0, { $0 + $1.utf8.count }) > 16_000_000 { pageUndo.removeFirst() }
     }
     func undoEdit() {
+        guard editingEnabled else { return }
         if let view = webView as? FolioWebView, view.complexEditorActive {
             view.evaluateJavaScript("document.execCommand('undo')")
             return
@@ -679,6 +689,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         recordJournalTransition(from: before, to: previous, kind: .undo); render()
     }
     func redoEdit() {
+        guard editingEnabled else { return }
         if let view = webView as? FolioWebView, view.complexEditorActive {
             view.evaluateJavaScript("document.execCommand('redo')")
             return
@@ -700,7 +711,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         recordJournalTransition(from: before, to: next, kind: .redo); render()
     }
     func acceptRenderedEdit(before: String, text updated: String, token: String, passage: String) {
-        guard token == highlightToken, !loading, !writing else { return }
+        guard token == highlightToken, !loading, !writing, editingEnabled else { return }
         guard before == text, updated.utf8.count <= DocumentReader.maximumBytes else {
             error = "The page changed before this edit could be applied. Your current draft has been kept. Please retry."
             render(); return
@@ -730,7 +741,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         let value = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(records))) ?? []
         let position: Any = pendingPosition.flatMap { try? JSONSerialization.jsonObject(with: JSONEncoder().encode($0)) } ?? NSNull()
         if ready { pendingPosition = nil }
-        script("render", [text, "folio-asset://\(assetHandler.token)/", highlightToken, value, highlightsReadable, position, !loading])
+        script("render", [text, "folio-asset://\(assetHandler.token)/", highlightToken, value, highlightsReadable, position, editingEnabled && !loading && !writing])
         applyAppearance()
     }
     func applyAppearance() {

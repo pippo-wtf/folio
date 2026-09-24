@@ -2,11 +2,11 @@
 
 This describes the local 0.13.0 candidate under review. The public release remains 0.12.3.
 
-The styled page is the default editor, with one continuous editing surface for ordinary text. Click a paragraph, heading, ordinary list or blockquote and type. The bottom bar provides Body, Heading 1/2, bulleted and numbered lists, Quote, Bold, Italic, Strike, Link and a word count. Oswald, Source Serif 4 and the saved preset remain in effect. A blank passage at the end allows continued writing. Click a link to edit its label and destination; Command-click follows it.
+Read is the default for existing documents: selecting, copying and saving highlights stay available, while document editing and Undo/Redo are disabled. Activate the pencil icon in the toolbar to reveal the bottom formatting bar and edit controls. The styled page becomes the editor, with one continuous editing surface for ordinary text. Click a paragraph, heading, ordinary list or blockquote and type. The bottom bar provides Body, Heading 1/2, bulleted and numbered lists, Quote, Bold, Italic, Strike, Link and a word count. Oswald, Source Serif 4 and the saved preset remain in effect. A blank passage at the end allows continued writing. Click a link to edit its label and destination; Command-click follows it.
 
 Fenced code blocks, simple pipe tables, and standalone local Markdown images have a small Edit control on the page. Code editing includes text and language. Table editing includes cells and row/column controls. Image editing includes alt text and a relative local path. Apply commits one undoable document edit; Cancel or Escape leaves the source untouched. The controls render the updated block immediately.
 
-Source is an optional toolbar toggle for the full Markdown document. There is no separate Read/Write mode selector. New and recovered documents open on the styled page.
+Source is an optional toolbar toggle for the full Markdown document. Opening Source activates Write. Choosing Read closes Source and keeps unsaved edits in the draft. New documents start in Write; existing documents start in Read.
 
 ## Saving and preservation
 
@@ -35,3 +35,7 @@ Saved highlights remain local annotations. Changing or deleting a marked quote c
 - The current 0.13.0 candidate has not been released. VoiceOver, input-method composition, narrow-window use, a clean-Mac install and near-limit performance remain unchecked.
 
 Final native link check (991005): clicking an existing link opened label/destination controls; changing its label and applying updated the rendered link. Save wrote the exact new Markdown destination, retained code, Unicode and the recovered sentinel, and did not alter the original file.
+
+Read/Write follow-up: 44 JavaScript tests and 42 native tests passed. Isolated build 991006 verified existing documents start in Read, Write exposes the editable page and formatting bar, and returning to Read removes both the editable surface and edit controls. The table dialog opened and canceled without changes; table/code pencils use larger SVGs aligned with their first line. Unavailable-image alignment received a subsequent correction. Public and installed apps were not replaced.
+
+The toolbar now uses one Writing mode pencil toggle. Reading and writing share the same parser mapping, block wrappers and symmetric gutters, preventing mode-specific line wrapping and image spacing. Read still creates no editing controls or input handlers.

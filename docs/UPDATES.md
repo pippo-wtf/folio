@@ -41,12 +41,12 @@ publication require an explicit release decision.
 
 Set `CFBundleShortVersionString` in `packaging/Info.plist` and use a strictly
 increasing numeric `CFBundleVersion`. The prepared local candidate is
-`0.13.0` / `2026092404`; the shipped `0.12.3` artifact is immutable.
+`0.13.0` / `2026092407`; the shipped `0.12.3` artifact is immutable.
 
 ```sh
 FOLIO_DISTRIBUTION=1 \
 FOLIO_CODESIGN_IDENTITY='Developer ID Application: Philip Scholl (D683769MKC)' \
-FOLIO_BUILD_VERSION=2026092404 \
+FOLIO_BUILD_VERSION=2026092407 \
 zsh scripts/package.sh public
 zsh scripts/notarize.sh dist/Folio.app
 FOLIO_CODESIGN_IDENTITY='Developer ID Application: Philip Scholl (D683769MKC)' \

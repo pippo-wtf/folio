@@ -4,6 +4,7 @@ const color = (v,f) => /^#[0-9a-f]{6}$/i.test(v || '') ? v : f;
 const num = (v,min,max,f) => typeof v==='number' && Number.isFinite(v) ? Math.max(min,Math.min(max,v)) : f;
 export function layoutCSS(s={}) {
  const n=(key,min,max,f)=>num(s[key],min,max,f);
+ const inset=`max(72px,min(${n('pageInset',16,100,48)}px,12vw))`;
  const gap=n('blockGap',.5,4,2.1), scale=n('headingScale',.75,1.5,1);
  const weight=(key,family,fallback)=>n(key,family==='Oswald'||family==='Source Serif 4'?200:100,family==='Oswald'?700:900,fallback);
  const bodyWeight=weight('bodyWeight',s.bodyFont,400);
@@ -13,7 +14,7 @@ export function layoutCSS(s={}) {
  @media(prefers-color-scheme:dark){:root:not([data-appearance="light"]){--paper:${color(s.darkPaper,'#171717')};--ink:${color(s.darkInk,'#E9E9E9')};}}
  :root[data-appearance="dark"]{--paper:${color(s.darkPaper,'#171717')};--ink:${color(s.darkInk,'#E9E9E9')};}
  body{font-family:${font(s.bodyFont)},serif;font-optical-sizing:auto;font-weight:${bodyWeight};line-height:${n('lineHeight',1.2,2,1.55)};}
- main{padding-top:${n('topInset',16,160,82)}px;padding-bottom:${n('bottomInset',24,200,132)}px;max-width:calc(${n('columnWidth',38,90,60)}ch + min(${n('pageInset',16,100,48)}px,12vw) * 2);padding-left:min(${n('pageInset',16,100,48)}px,12vw);padding-right:min(${n('pageInset',16,100,48)}px,12vw);}
+ main{padding-top:${n('topInset',16,160,82)}px;padding-bottom:${n('bottomInset',24,200,132)}px;max-width:calc(${n('columnWidth',38,90,60)}ch + ${inset} * 2);padding-left:${inset};padding-right:${inset};}
  h1,h2,h3,h4,h5,h6{font-family:${font(s.headingFont)},sans-serif;font-weight:${weight('headingWeight',s.headingFont,700)};${s.headingFont==='Oswald'?'letter-spacing:0;':''}}
  strong,b{font-weight:${Math.min(s.bodyFont==='Oswald'?700:900,Math.max(700,bodyWeight+200))};}
  h1{font-size:${1.65*scale}rem;}h2{font-size:${1.3*scale}rem;}h3{font-size:${1.1*scale}rem;}h4,h5,h6{font-size:${1*scale}rem;}

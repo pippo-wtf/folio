@@ -157,3 +157,13 @@ test('editing a link rewrites its passage while adjacent source stays byte-ident
  assert.ok(after.endsWith('```js\r\nkeep();  \r\n```\r\n'));
  assert.notEqual(after,source);
 });
+
+test('rendered writing preserves literal named entities after save and reopen',()=>{
+ const saved=serialize(element('P',textNode('Literal &copy; and &amp; stay as typed.')));
+ assert.equal(parse(saved).html,'<p>Literal &amp;copy; and &amp;amp; stay as typed.</p>\n');
+});
+
+test('inline code containing only spaces retains its exact text after saving',()=>{
+ const saved=serialize(element('P',textNode('Before '),element('CODE',textNode('  ')),textNode(' after.')));
+ assert.equal(parse(saved).html,'<p>Before <code>  </code> after.</p>\n');
+});

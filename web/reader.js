@@ -56,7 +56,7 @@ window.Folio={
   const old=window.scrollY,oldHeading=[...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].filter(e=>e.getBoundingClientRect().top<=80).pop();
   const anchor=oldHeading?{id:oldHeading.id,offset:oldHeading.getBoundingClientRect().top}:null;
   const version=++renderVersion;
-  const result=parse(markdown,assetPrefix,editing); codes=result.codeBlocks;
+  const result=parse(markdown,assetPrefix,true); codes=result.codeBlocks;
   const previousHost=document.activeElement===document.getElementById('document')?document.getElementById('document'):null;
   let caret=null;
   if(previousHost&&getSelection()?.rangeCount){
@@ -67,7 +67,7 @@ window.Folio={
   document.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false;}));
   setupEditing(markdown,result.blocks,result.complexBlocks,assetPrefix,highlightToken,editing,send);
   restoreHighlights(highlightToken,highlights,canSaveHighlights);
-  if(caret){
+  if(caret&&editing){
    const host=document.getElementById('document');
    if(host){host.focus({preventScroll:true});const walker=document.createTreeWalker(host,NodeFilter.SHOW_TEXT);let node,last,offset=caret.offset;
     while((node=walker.nextNode())){last=node;if(offset<=node.length)break;offset-=node.length;}

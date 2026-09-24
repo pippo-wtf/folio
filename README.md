@@ -8,7 +8,7 @@
 
 Read the brief. Refine the idea. Highlight what matters.
 
-**[Download for Mac](https://github.com/pippo-wtf/folio/releases/download/v0.12.3/Folio.dmg)** · [Features](#features) · [Installation](#installation)
+**[Download for Mac](https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio.dmg)** · [Features](#features) · [Installation](#installation)
 
 Apple silicon · macOS 14+ · Free & open source
 
@@ -27,7 +27,7 @@ Beautiful typography. A clean page. Your own Markdown files.
 ## Features
 
 - **Read with room to breathe.** Expressive headings, comfortable serif text and generous spacing, with Folio’s signature Green Line look.
-- **Write where you read.** Edit ordinary text directly on the rendered page. Keep everyday formatting close with the bottom toolbar.
+- **Write where you read.** Activate the pencil to write directly on the page; turn it off to read and highlight. Keep everyday formatting close with the bottom toolbar.
 - **Keep what matters.** Save highlights, add comments and jump back to marked passages from the sidebar.
 - **See more than plain text.** Render lists, checkboxes, tables, code, callouts, footnotes, equations and diagrams.
 - **Go to the source.** Switch to the underlying Markdown whenever you need it.
@@ -49,35 +49,36 @@ Beautiful typography. A clean page. Your own Markdown files.
 
 </details>
 
-*Enter starts a paragraph. Shift+Enter starts a new line. This is an early preview: tables, code and other complex blocks currently use Source view for editing.*
+*Enter starts a paragraph. Shift+Enter starts a new line. Edit simple tables, fenced code and local images using their pencil controls. Other complex Markdown remains available in Source.*
 
 ## Installation
 
 ### Download for Mac
 
-1. **[Download Folio.dmg](https://github.com/pippo-wtf/folio/releases/download/v0.12.3/Folio.dmg).**
-2. Open it and drag **Folio** into **Applications**.
+1. **[Download Folio.dmg](https://github.com/pippo-wtf/folio/releases/download/v0.13.0/Folio.dmg).**
+2. Open it and launch **Install Folio**. It installs into your personal **Applications** folder.
 3. Open Folio and choose a Markdown file.
 
 **All you need is an Apple silicon Mac running macOS 14 or later.**
 You don’t need Node.js, Xcode, an AI subscription or another Markdown app to run the download.
 
-> **First launch:** this preview is not yet Apple-notarized. If macOS blocks it, follow the [installation notes](packaging/INSTALL.txt). Only open a download you trust.
+Folio is Developer ID signed and Apple-notarized. On first launch, you can choose whether Folio opens your Markdown files by default.
 
 ### Install with Homebrew
 
 If you already use [Homebrew](https://brew.sh), install from the Folio tap:
 
 ```sh
-brew install --cask pippo-wtf/tap/folio
+brew install --cask --appdir="$HOME/Applications" pippo-wtf/tap/folio
 ```
 
 Homebrew is optional. The direct download is the simplest way to start.
 
 ### Updating
 
-Quit Folio, download the new version and replace the app in Applications.
-Your documents and saved preferences stay in place. Updates are manual for now.
+Folio shows available updates and release notes. Choose **Update** to download, then **Install & Relaunch** when ready. Nothing installs automatically.
+For versions older than 0.13, install the new download once to enable in-app updates.
+Your documents and saved preferences stay in place.
 For a Homebrew installation, use `brew update` followed by `brew upgrade --cask pippo-wtf/tap/folio`.
 
 ## Made by Pippo

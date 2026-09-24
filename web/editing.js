@@ -10,7 +10,7 @@ export function replacePassage(source, blocks, id, replacement) {
  const delta=value.length-(block.end-block.start);
  return {source:source.slice(0,block.start)+value+source.slice(block.end),blocks:blocks.map(b=>b.id===id?{...b,end:b.end+delta}:b.start>=block.end?{...b,start:b.start+delta,end:b.end+delta}:b)};
 }
-const escapeText=s=>s.replace(/\\/g,'\\\\').replace(/([`*_{}\[\]<>#!|~^=])/g,'\\$1').replace(/(^|\n)(\s*)([-+]|\d+[.)])(?=\s)/g,'$1$2\\$3');
+const escapeText=s=>s.replace(/\\/g,'\\\\').replace(/([`*_{}\[\]<>#!|~^=&])/g,'\\$1').replace(/(^|\n)(\s*)([-+]|\d+[.)])(?=\s)/g,'$1$2\\$3');
 export function serialize(node){
  if(node.nodeType===3)return escapeText(node.nodeValue.replace(/\u00a0/g,' '));
  if(node.nodeType!==1)return '';
@@ -23,7 +23,7 @@ export function serialize(node){
  if(tag==='CODE'){
   const text=node.textContent;let longest=0;for(const match of text.matchAll(/`+/g))longest=Math.max(longest,match[0].length);
   const ticks='`'.repeat(longest+1);
-  const pad=/^`|`$|^ .* $/.test(text)?' ':'';return ticks+pad+text+pad+ticks;
+  const pad=(/^`|`$/.test(text)||(/^ .* $/.test(text)&&/[^ ]/.test(text)))?' ':'';return ticks+pad+text+pad+ticks;
  }
  if(tag==='A'){
   const href=node.getAttribute('href')||'';
@@ -75,8 +75,7 @@ function documentWordCount(root){
 
 let activeCleanup=()=>{};
 export function setupEditing(initial,initialBlocks,complexBlocks,assetPrefix,token,enabled,send){
- activeCleanup();document.getElementById('format-bar')?.remove();
- if(!enabled)return;
+ activeCleanup();activeCleanup=()=>{};document.getElementById('format-bar')?.remove();
  let source=initial,active=null,range=null,structuredEditSerial=0;
  const root=document.getElementById('document'),original=new WeakMap(),protectedNodes=[];
  const nodes=[...root.childNodes],ordinaryById=new Map(initialBlocks.map(block=>[block.id,block])),complexById=new Map(complexBlocks.map(block=>[block.id,block]));let pending=[],offset=0;
@@ -97,9 +96,9 @@ export function setupEditing(initial,initialBlocks,complexBlocks,assetPrefix,tok
   const complex=node.nodeType===1&&complexById.get(node.dataset.complex);
   if(complex){
    preserve(complex.start);
-   const host=document.createElement('div');host.className='source-preserved complex-passage';host.contentEditable='false';host.dataset.complex=complex.id;
+   const host=document.createElement('div');host.className='source-preserved complex-passage';host.contentEditable='false';host.dataset.complex=complex.id;host.dataset.kind=complex.kind;
    node.removeAttribute('data-complex');host.append(node);
-   const button=document.createElement('button');button.type='button';button.className='complex-edit-button';button.textContent='✎';button.setAttribute('aria-label','Edit '+complex.kind);button.title='Edit '+complex.kind;host.append(button);
+   if(enabled){const button=document.createElement('button');button.type='button';button.className='complex-edit-button';button.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z"/><path d="m14 5 5 5"/></svg>';button.setAttribute('aria-label','Edit '+complex.kind);button.title='Edit '+complex.kind;host.append(button);}
    original.set(host,{raw:initial.slice(complex.start,complex.end),locked:true,kind:complex.kind});protectedNodes.push(host);fragment.append(host);offset=complex.end;continue;
   }
   const block=node.nodeType===1&&ordinaryById.get(node.dataset.edit);
@@ -111,6 +110,21 @@ export function setupEditing(initial,initialBlocks,complexBlocks,assetPrefix,tok
   fragment.append(host);offset=block.end;
  }
  preserve(initial.length);root.replaceChildren(fragment);
+ // Identical wrappers in both modes preserve column geometry and block spacing.
+ // Reading stops before registering input handlers or making anything editable.
+ if(!enabled){root.removeAttribute('contenteditable');root.setAttribute('aria-label','Document');return;}
+ // Measure the first visible line, so controls stay aligned at every font size.
+ const positionControls=()=>root.querySelectorAll('.complex-passage').forEach(host=>{
+  const first=host.querySelector('th,summary,img:not([hidden]),.image-fallback:not([hidden])')||host.firstElementChild;
+  if(!first)return;
+  const bounds=first.getBoundingClientRect(),style=getComputedStyle(first);
+  const center=first.tagName==='IMG'?bounds.top+18:bounds.top+parseFloat(style.paddingTop)+parseFloat(style.lineHeight)/2;
+  host.style.setProperty('--edit-control-top',(center-host.getBoundingClientRect().top-18)+'px');
+ });
+ const observer=new ResizeObserver(positionControls);observer.observe(root);
+ root.querySelectorAll('.complex-passage').forEach(host=>observer.observe(host));
+ document.fonts.ready.then(()=>{if(root.isContentEditable)positionControls();});
+ requestAnimationFrame(positionControls);
  root.contentEditable='true';root.spellcheck=true;root.setAttribute('role','textbox');root.setAttribute('aria-multiline','true');root.setAttribute('aria-label','Document editor');
  root.querySelectorAll('.edit-passage code').forEach(code=>{
   code.spellcheck=false;code.setAttribute('autocorrect','off');code.setAttribute('autocapitalize','off');code.setAttribute('writingsuggestions','false');
@@ -291,5 +305,5 @@ export function setupEditing(initial,initialBlocks,complexBlocks,assetPrefix,tok
   document.execCommand(button.dataset.block?'formatBlock':button.dataset.command,false,button.dataset.block||null);commit(active);select();
  });
  root.addEventListener('keydown',keydown);root.addEventListener('input',input);root.addEventListener('paste',paste);root.addEventListener('drop',drop);root.addEventListener('beforeinput',beforeinput);root.addEventListener('click',rootClick);document.addEventListener('selectionchange',select);
- activeCleanup=()=>{closePanel();root.removeAttribute('contenteditable');root.removeAttribute('role');root.removeAttribute('aria-multiline');root.removeEventListener('keydown',keydown);root.removeEventListener('input',input);root.removeEventListener('paste',paste);root.removeEventListener('drop',drop);root.removeEventListener('beforeinput',beforeinput);root.removeEventListener('click',rootClick);document.removeEventListener('selectionchange',select);};
+ activeCleanup=()=>{observer.disconnect();closePanel();root.setAttribute('aria-label','Document');root.removeAttribute('contenteditable');root.removeAttribute('role');root.removeAttribute('aria-multiline');root.removeEventListener('keydown',keydown);root.removeEventListener('input',input);root.removeEventListener('paste',paste);root.removeEventListener('drop',drop);root.removeEventListener('beforeinput',beforeinput);root.removeEventListener('click',rootClick);document.removeEventListener('selectionchange',select);};
 }
