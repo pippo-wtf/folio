@@ -301,7 +301,9 @@ struct ReaderView: View {
             Toggle(isOn: $model.writing) {
                 Label("Source", systemImage: "chevron.left.forwardslash.chevron.right")
             }.toggleStyle(.button).help("Show Markdown source").disabled(model.loading || model.preparingPrint)
-            Button("Save") { model.save() }.disabled(model.loading || (!model.dirty && model.fileURL != nil))
+            Button { model.save() } label: { Label("Save", systemImage: "square.and.arrow.down").labelStyle(.iconOnly) }
+                .help("Save document (⌘S)").accessibilityLabel("Save")
+                .disabled(model.loading || (!model.dirty && model.fileURL != nil))
 
             Button {
                 model.showFind = true
@@ -310,10 +312,12 @@ struct ReaderView: View {
             }
             .help("Find in document")
 
+            #if FOLIO_STAGING
             PresetMenu(model: model)
 
             Button { openWindow(id: "layout") } label: { Label("Layout", systemImage: "slider.horizontal.3") }
                 .help("Customize layout")
+            #endif
 
             Menu {
                 Button {

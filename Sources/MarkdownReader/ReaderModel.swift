@@ -6,7 +6,7 @@ import ReaderCore
 
 struct Heading: Identifiable, Decodable { let id: String; let title: String; let level: Int }
 @MainActor final class ReaderModel: ObservableObject {
-    static let shared = ReaderModel()
+    static let shared: ReaderModel = { BuildChannel.prepareDefaults(); return ReaderModel() }()
     @Published var layout = ReaderModel.savedLayout() {
         didSet {
             guard layout.isValid else { return }
@@ -119,7 +119,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     @Published var text = "" { didSet { scheduleRecovery() } }
     private var recoveryTask: Task<Void, Never>?
     private var recoveryReadable = true
-    private let draftStore = DraftStore(url: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Folio/Recovery/draft.json"))
+    private let draftStore = DraftStore(url: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("\(BuildChannel.storage)/Recovery/draft.json"))
     private func scheduleRecovery() {
         recoveryTask?.cancel()
         recoveryTask = Task { [weak self] in
@@ -257,7 +257,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     let assetHandler = LocalAssets()
     private var lastErrorCode = "none"
 
-    private let highlightStore = HighlightStore(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Folio/Highlights"))
+    private let highlightStore = HighlightStore(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("\(BuildChannel.storage)/Highlights"))
     private var highlightToken = ""
     private var highlightsReadable = false
     private var isWelcome = true
@@ -559,7 +559,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         operation.runModal(for: window, delegate: completion, didRun: #selector(PDFExportCompletion.didFinish(_:success:context:)), contextInfo: nil)
     }
     func exportDiagnostics() {
-        let report: [String: Any] = ["app":"Folio", "version":"0.12.2", "build":1, "system":ProcessInfo.processInfo.operatingSystemVersionString, "lastErrorCode":lastErrorCode, "rendererReady":ready]
+        let report: [String: Any] = ["app":"Folio", "version":"0.12.3", "build":1, "system":ProcessInfo.processInfo.operatingSystemVersionString, "lastErrorCode":lastErrorCode, "rendererReady":ready]
         do {
             let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Folio-Diagnostics", isDirectory: true)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

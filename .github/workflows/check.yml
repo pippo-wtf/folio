@@ -14,3 +14,4 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: swift test
+      - run: swift build -Xswiftc -DFOLIO_STAGING

@@ -6,7 +6,7 @@ struct FolioApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var model = ReaderModel.shared
     var body: some Scene {
-        Window("Folio", id: "reader") {
+        Window(BuildChannel.name, id: "reader") {
             ReaderView(model: model)
                 .frame(minWidth: 580, minHeight: 440)
                 .onAppear { model.startReading() }
@@ -52,10 +52,12 @@ struct FolioApp: App {
                 Button("Export Private Diagnostics…") { model.exportDiagnostics() }
             }
         }
+        #if FOLIO_STAGING
         Window("Layout", id: "layout") {
             LayoutEditor(model: model)
         }
         .defaultSize(width: 390, height: 700)
+        #endif
     }
 }
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {

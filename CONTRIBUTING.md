@@ -27,3 +27,22 @@ and third-party notices. Font licenses are included beside the font files.
 
 Personal research notes, local app builds and screenshots of user documents are
 excluded from the public source. Release screenshots use a purpose-written sample.
+
+## Staging
+
+The public build hides Layout and Presets. Save is an icon in both editions.
+
+```sh
+zsh scripts/package.sh public
+zsh scripts/installer.sh
+zsh scripts/install-local.sh public
+zsh scripts/package.sh staging
+zsh scripts/install-local.sh staging
+```
+
+This maintains exactly two named apps: `Folio.app` and `Folio Staging.app`.
+Staging uses a separate bundle identifier, preferences, recovery drafts and highlights.
+Both begin with the approved appearance; subsequent changes are independent.
+Opening and saving an original document still changes that same file in either app.
+Staging does not register Markdown file associations or install a Quick Look extension.
+It is not included in the public installer.
