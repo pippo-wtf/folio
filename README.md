@@ -12,9 +12,7 @@ Apple silicon · macOS 14+ · Free & open source
 
 </div>
 
-![Folio reading view with Oswald headings, serif body text and a saved green highlight](docs/images/folio-reading.png)
-
-**[Watch the 18-second Folio overview](https://github.com/pippo-wtf/folio/releases/download/v0.12.3/Folio-Tour.mp4)** — a captioned tour made from real app screenshots.
+![Folio on an Apple Studio Display — product mockup](docs/images/folio-packshot.png)
 
 ## Your next step after the AI draft
 
