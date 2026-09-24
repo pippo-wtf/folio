@@ -12,6 +12,10 @@ Apple silicon · macOS 14+ · Free & open source
 
 </div>
 
+![Folio reading view with Oswald headings, serif body text and a saved green highlight](docs/images/folio-reading.png)
+
+**[Watch the 18-second Folio overview](https://github.com/pippo-wtf/folio/releases/download/v0.12.3/Folio-Tour.mp4)** — a captioned tour made from real app screenshots.
+
 ## Your next step after the AI draft
 
 The plan from Claude. The notes from Codex. The brief behind your next idea.
@@ -29,6 +33,21 @@ Beautiful typography. A clean page. Your own Markdown files.
 - **Go to the source.** Switch to the underlying Markdown whenever you need it.
 - **Share something polished.** Export a PDF or copy formatted text into another app.
 - **Keep your files yours.** Open and save regular `.md` files. No proprietary library to move into.
+
+## A closer look
+
+**Keep your thinking beside the text.** Saved highlights and comments stay within reach in the Marked sidebar.
+
+![Folio with a saved passage and review comment in the sidebar](docs/images/folio-highlights.png)
+
+<details>
+<summary>See tables and code rendering</summary>
+
+![Markdown table rendered in Folio](docs/images/folio-tables.png)
+
+![JavaScript syntax highlighting and code blocks in Folio](docs/images/folio-code.png)
+
+</details>
 
 *Enter starts a paragraph. Shift+Enter starts a new line. This is an early preview: tables, code and other complex blocks currently use Source view for editing.*
 
