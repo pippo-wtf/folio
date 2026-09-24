@@ -1,6 +1,6 @@
 # Folio update delivery
 
-Folio 0.13.0 uses Sparkle 2.10.0. Public and staging apps have separate bundle
+Folio 0.13.1 uses Sparkle 2.10.0. Public and staging apps have separate bundle
 IDs, settings, storage, signed feeds, and EdDSA public keys. The app checks for
 updates automatically and shows availability and release notes. Download,
 verification, installation, and relaunch begin only after the user clicks
@@ -143,4 +143,4 @@ Official references: [Sparkle setup](https://sparkle-project.org/documentation/)
 
 A confirmed newer release shows “Update available - check it out” beside the toolbar controls. Scheduled checks keep the update dialog hidden; clicking the notification opens it with release notes. Choosing Later keeps the notification available. Nothing downloads until Update Folio is clicked, and installation still requires Install & Relaunch.
 
-Verified with the signed local Sparkle fixture: no notification before discovery; scheduled discovery shows the link without a dialog; clicking opens release notes; Later and reopening work without downloading. The Swift suite passed 42 tests. The notarized public-channel build 2026092408 was installed locally; the published 0.13.0 downloads remain unchanged.
+Verified with the signed local Sparkle fixture: no notification before discovery; scheduled discovery shows the link without a dialog; clicking opens release notes; Later and reopening work without downloading. The Swift suite passed 42 tests. Release 0.13.1 (build 2026092409) moves the notification to the left toolbar, with a thin divider after the Open icon. Public and staging release artifacts are recorded in `updates/release-0.13.1.json`.
