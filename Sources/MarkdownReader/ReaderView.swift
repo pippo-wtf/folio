@@ -10,6 +10,8 @@ struct ReaderView: View {
 
     @State private var isDropTargeted: Bool = false
     @State private var sidebarSelection: String?
+    @State private var previewUpdateNotice = false
+    @State private var updatePreviewID = UUID()
     @FocusState private var findFieldFocused: Bool
 
     private var columnVisibility: Binding<NavigationSplitViewVisibility> {
@@ -49,6 +51,11 @@ struct ReaderView: View {
         return Color(red: Double((value >> 16) & 255)/255, green: Double((value >> 8) & 255)/255, blue: Double(value & 255)/255)
     }
 
+    private var nativeToolbarTitle: ToolbarDefaultItemKind? {
+        if #available(macOS 15.0, *) { return .title }
+        return nil
+    }
+
     var body: some View {
         NavigationSplitView(columnVisibility: columnVisibility) {
             outlineSidebar
@@ -56,8 +63,19 @@ struct ReaderView: View {
             detailContent
         }
         .navigationSplitViewStyle(.balanced)
+        .sheet(item: $model.commentDraft) { draft in
+            CommentComposer(draft: draft, paper: paperColor, ink: inkColor, accent: accentColor,
+                cancel: { model.commentDraft = nil }, save: { model.saveComment($0, draft: draft) })
+                .preferredColorScheme(isDark ? .dark : .light)
+                .presentationBackground(paperColor)
+        }
+        .onAppear {
+            let action = openWindow
+            DispatchQueue.main.async { ReaderWindowPresenter.shared.install { action(id: "reader") } }
+        }
         .navigationTitle((model.title.isEmpty ? "Folio" : model.title) + (model.dirty ? " — Edited" : ""))
         .toolbar { toolbarContent }
+        .toolbar(removing: nativeToolbarTitle)
         .toolbarBackground(.hidden, for: .windowToolbar)
         .background(WindowChrome(dark: colorScheme == .dark || (colorScheme == nil && systemScheme == .dark), paper: (colorScheme == .dark || (colorScheme == nil && systemScheme == .dark)) ? model.layout.darkPaper : model.layout.lightPaper))
         .preferredColorScheme(colorScheme)
@@ -314,22 +332,36 @@ struct ReaderView: View {
                 Label("Open", systemImage: "doc.badge.plus")
             }
             .help("Open a document")
-            if updater.updateAvailable {
-                HStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Text((model.title.isEmpty ? "Folio" : model.title) + (model.dirty ? " — Edited" : ""))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(inkColor)
+                    .lineLimit(1).truncationMode(.middle)
+                    .frame(maxWidth: 220, alignment: .leading)
+                    .help(model.title)
+                if updater.updateAvailable || previewUpdateNotice {
                     Rectangle()
                         .fill(.secondary.opacity(0.25))
                         .frame(width: 1, height: 16)
                         .accessibilityHidden(true)
-                    Button("Update available - check it out") { updater.showAvailableUpdate() }
+                    Button {
+                        if previewUpdateNotice { updatePreviewID = UUID() }
+                        else { updater.showAvailableUpdate() }
+                    } label: {
+                        UpdateNoticeText().id(updatePreviewID)
+                    }
                         .buttonStyle(.plain)
                         .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(accentColor)
+                        .accessibilityLabel("App Update available. Check it out.")
                         .help("See what’s new in Folio")
                 }
             }
         }
 
-        ToolbarItemGroup {
+        ToolbarItem(placement: .principal) { Spacer() }
+
+        ToolbarItemGroup(placement: .primaryAction) {
             Toggle(isOn: $model.editingEnabled) {
                 Label("Write", systemImage: "pencil")
                     .labelStyle(.iconOnly)
@@ -407,6 +439,16 @@ struct ReaderView: View {
                 Divider()
                 Button("Export Feedback…") { model.exportFeedback() }
                 Button("Clear Exported Edit History…") { model.clearExportedEditJournal() }
+                #if FOLIO_STAGING
+                Divider()
+                Button(previewUpdateNotice ? "Replay Update Animation" : "Preview Update Animation") {
+                    updatePreviewID = UUID()
+                    previewUpdateNotice = true
+                }
+                if previewUpdateNotice {
+                    Button("Hide Update Preview") { previewUpdateNotice = false }
+                }
+                #endif
                 Button("Export Diagnostics…") {
                     model.exportDiagnostics()
                 }

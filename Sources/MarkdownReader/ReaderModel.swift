@@ -389,6 +389,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             return true
         } catch { self.error = error.localizedDescription; return false }
     }
+    @Published var commentDraft: HighlightCommentDraft?
     @Published var marked: [SavedHighlight] = []
     @Published var headings: [Heading] = []
     @Published var error: String?
@@ -451,23 +452,26 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     func commentOnHighlight(_ id: String, token requestToken: String? = nil) {
         guard requestToken == nil || requestToken == highlightToken else { return }
         guard let index = marked.firstIndex(where: { $0.id == id }) else { return }
-        let alert = NSAlert(); alert.messageText = "Comment on this passage"
-        alert.informativeText = String(marked[index].quote.prefix(220))
-        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 360, height: 130)); scroll.hasVerticalScroller = true
-        let field = NSTextView(frame: scroll.bounds); field.isRichText = false; field.font = .systemFont(ofSize: 14)
-        field.string = marked[index].comment ?? ""; field.autoresizingMask = [.width]; field.textContainer?.widthTracksTextView = true
-        field.setAccessibilityLabel("Comment"); scroll.documentView = field; alert.accessoryView = scroll
-        alert.addButton(withTitle: "Save Comment"); alert.addButton(withTitle: "Cancel"); alert.window.initialFirstResponder = field
-        let key = highlightKey, token = highlightToken
-        guard alert.runModal() == .alertFirstButtonReturn, key == highlightKey, token == highlightToken else { return }
+        commentDraft = HighlightCommentDraft(id: id, quote: marked[index].quote,
+            text: marked[index].comment ?? "", documentKey: highlightKey, token: highlightToken)
+    }
+    /// Returns an error without dismissing the composer or losing its text.
+    func saveComment(_ value: String, draft: HighlightCommentDraft) -> String? {
+        guard draft.documentKey == highlightKey, draft.token == highlightToken,
+              let index = marked.firstIndex(where: { $0.id == draft.id }) else {
+            return "This passage has changed. Close this comment and select it again."
+        }
+        let comment = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard comment.utf16.count <= 8000 else { return "Keep comments below 8,000 characters." }
         var records = marked
-        let comment = field.string.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard comment.utf16.count <= 8000 else { error = "Keep comments below 8,000 characters."; return }
         records[index].comment = comment.isEmpty ? nil : comment
         do {
-            try highlightStore.save(records, for: key, revision: HighlightStore.revision(text), draft: dirty)
-            marked = records; render()
-        } catch { self.error = "The comment could not be saved. Please try again." }
+            try highlightStore.save(records, for: draft.documentKey, revision: HighlightStore.revision(text), draft: dirty)
+            marked = records
+            commentDraft = nil
+            render()
+            return nil
+        } catch { return "The comment could not be saved. Please try again." }
     }
     func removeHighlight(_ id: String) {
         saveHighlights(marked.filter { $0.id != id }, token: highlightToken)

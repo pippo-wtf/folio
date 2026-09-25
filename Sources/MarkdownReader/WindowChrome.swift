@@ -45,6 +45,7 @@ struct WindowChrome: NSViewRepresentable {
                 window.delegate = closeGuard
             }
             window.isDocumentEdited = ReaderModel.shared.dirty
+            window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
             window.toolbarStyle = .unified
             window.titlebarSeparatorStyle = .none

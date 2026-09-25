@@ -69,21 +69,48 @@ struct FolioApp: App {
     }
 }
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        LaunchTrace.record("willFinishLaunching")
+        NotificationCenter.default.addObserver(self, selector: #selector(windowClosing(_:)), name: NSWindow.willCloseNotification, object: nil)
+    }
+    @objc private func windowClosing(_ notification: Notification) { LaunchTrace.record("windowWillClose") }
+    func applicationWillTerminate(_ notification: Notification) { LaunchTrace.record("willTerminate") }
+    func applicationDidBecomeActive(_ notification: Notification) { LaunchTrace.record("becameActive") }
+    func applicationDidResignActive(_ notification: Notification) { LaunchTrace.record("resignedActive") }
     func applicationDidFinishLaunching(_ notification: Notification) {
+        LaunchTrace.record("didFinishLaunching")
         NSWindow.allowsAutomaticWindowTabbing = false
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         // Wait for the application and document window to become active before
         // presenting crash recovery. A modal alert during launch can abort.
         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(400)) {
+            LaunchTrace.record("startupReady")
             ReaderModel.shared.recoveryPromptReady = true
             ReaderModel.shared.startReading()
             DefaultMarkdownApp.offerIfNeeded()
         }
     }
     func application(_ application: NSApplication, open urls: [URL]) {
-        if let url = urls.first { ReaderModel.shared.load(url) }
+        LaunchTrace.record("openURLs count=\(urls.count)")
+        if let url = urls.first {
+            ReaderModel.shared.load(url)
+            DispatchQueue.main.async { ReaderWindowPresenter.shared.request() }
+        }
     }
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { ReaderModel.shared.confirmLeave() ? .terminateNow : .terminateCancel }
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let allowed = ReaderModel.shared.confirmLeave()
+        LaunchTrace.record("shouldTerminate allowed=\(allowed)")
+        return allowed ? .terminateNow : .terminateCancel
+    }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // A Finder open can arrive during window teardown. Keep the application
+        // available to present that document; explicit Quit still confirms edits.
+        LaunchTrace.record("lastWindowClosed keepRunning")
+        return false
+    }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        DispatchQueue.main.async { ReaderWindowPresenter.shared.request() }
+        return true
+    }
 }
