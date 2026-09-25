@@ -53,6 +53,8 @@ ul{list-style:disc}ul ul{list-style:circle}ul ul ul{list-style:square}
  display:inline-grid;place-content:center;border:1.5px solid var(--muted);border-radius:.16em;
  background:var(--paper);color:var(--accent-ink);opacity:1;
 }
+.task-list-item-checkbox:not(:disabled){cursor:pointer}
+.task-list-item-checkbox:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .task-list-item-checkbox:checked{background:var(--accent);border-color:var(--accent)}
 .task-list-item-checkbox:checked::after{
  content:"";width:.48em;height:.27em;border-left:.1em solid currentColor;border-bottom:.1em solid currentColor;

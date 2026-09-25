@@ -8,6 +8,7 @@ let restoring=false,diagramWork=Promise.resolve();
 const send=message=>window.webkit?.messageHandlers.folio.postMessage(message);
 window.Folio={
  highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,
+ focusTask(offset){document.querySelector(`input[data-task-offset="${Number(offset)}"]`)?.focus({preventScroll:true});},
  updateCode(index,text){if(Number.isInteger(index)&&index>=0&&index<codes.length)codes[index]=text;},
  finishExport(){
   document.querySelectorAll('.print-keep').forEach(el=>el.replaceWith(...el.childNodes));

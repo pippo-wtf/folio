@@ -691,7 +691,6 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         while pageUndo.count > 100 || pageUndo.reduce(0, { $0 + $1.utf8.count }) > 16_000_000 { pageUndo.removeFirst() }
     }
     func undoEdit() {
-        guard editingEnabled else { return }
         if let view = webView as? FolioWebView, view.complexEditorActive {
             view.evaluateJavaScript("document.execCommand('undo')")
             return
@@ -713,7 +712,6 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         recordJournalTransition(from: before, to: previous, kind: .undo); render()
     }
     func redoEdit() {
-        guard editingEnabled else { return }
         if let view = webView as? FolioWebView, view.complexEditorActive {
             view.evaluateJavaScript("document.execCommand('redo')")
             return
@@ -733,6 +731,21 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         let before = text
         pageEditTime = .distantPast; pageUndo.append(text); trimPageHistory(); text = next
         recordJournalTransition(from: before, to: next, kind: .redo); render()
+    }
+    func toggleTask(before: String, offset: Int, checked: Bool, token: String) {
+        guard token == highlightToken, !loading, !writing, !preparingPrint else { return }
+        guard before == text, let updated = TaskListEdit.setChecked(checked, atUTF16: offset, in: text) else {
+            error = "The task changed before it could be checked. Please try again."
+            render(); return
+        }
+        if updated != text {
+            _ = flushEditJournal()
+            pageUndo.append(text); trimPageHistory(); pageRedo = []; pageEditTime = .distantPast
+            text = updated
+            recordJournalTransition(from: before, to: updated, kind: .renderedEdit)
+        }
+        render()
+        script("focusTask", [offset])
     }
     func acceptRenderedEdit(before: String, text updated: String, token: String, passage: String) {
         guard token == highlightToken, !loading, !writing, editingEnabled else { return }

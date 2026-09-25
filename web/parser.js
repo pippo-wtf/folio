@@ -18,7 +18,7 @@ const mathEngine={renderToString(source,options){
 export function parse(markdown, assetPrefix='folio-asset://unavailable/', editing=false) {
  const md=new MarkdownIt({html:false,linkify:true,typographer:false}).use(footnote).use(tasks,{enabled:false,label:false}).use(deflist).use(mark).use(sub).use(sup).use(writingExtensions).use(texmath,{engine:mathEngine,delimiters:['dollars','brackets'],katexOptions:{...mathOptions}});
  const headings=[], images=[], codeBlocks=[], diagrams=[], used=new Set(),nextHeadingSuffix=new Map();
- const originalSource=markdown, blocks=[], complexBlocks=[];
+ const originalSource=markdown, blocks=[], complexBlocks=[], taskItems=[];
  const metadata = markdown.match(/^---\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)(?:\r?\n|$)/);
  if(metadata) markdown=markdown.slice(metadata[0].length);
  md.core.ruler.after('inline','folio-callouts',state=>{
@@ -99,6 +99,18 @@ export function parse(markdown, assetPrefix='folio-asset://unavailable/', editin
  if(editing){
   const offsets=[0];for(const match of markdown.matchAll(/\r\n|\n|\r/g))offsets.push(match.index+match[0].length);
   const base=metadata?.[0].length||0;
+  for(const token of tokens){
+   const checkbox=token.type==='inline'&&token.children?.find(c=>c.type==='html_inline'&&c.content.includes('class="task-list-item-checkbox"'));
+   if(!checkbox||!token.map)continue;
+   const lineStart=offsets[token.map[0]],lineEnd=offsets[token.map[0]+1]??markdown.length;
+   const match=markdown.slice(lineStart,lineEnd).match(/^(?:[ \t]|>[ \t]?|(?:[-+*]|\d+[.)])[ \t]+)*\[([ xX])\](?=[ \t])/);
+   if(!match)continue;
+   const offset=base+lineStart+match[0].lastIndexOf('[')+1;
+   const label=md.utils.escapeHtml(token.content.trim().slice(0,200)||'Task');
+   taskItems.push({offset,checked:match[1]!==' '});
+   checkbox.content=checkbox.content.replace(' disabled="" ', ' ').replace('type="checkbox"',`type="checkbox" data-task-offset="${offset}" aria-label="${label}"`);
+  }
+
   const allowed=new Set(['paragraph_open','paragraph_close','heading_open','heading_close','bullet_list_open','bullet_list_close','ordered_list_open','ordered_list_close','list_item_open','list_item_close','blockquote_open','blockquote_close','inline']);
   const inlineAllowed=new Set(['text','softbreak','hardbreak','strong_open','strong_close','em_open','em_close','s_open','s_close','code_inline','link_open','link_close']);
   const claim=(token,kind,start,finish)=>{
@@ -131,5 +143,5 @@ export function parse(markdown, assetPrefix='folio-asset://unavailable/', editin
    t.attrSet('data-edit',id);t.attrSet('contenteditable','true');t.attrSet('spellcheck','true');
   }
  }
- return {html:metadataHTML+md.renderer.render(tokens,md.options,env),headings,images,codeBlocks,diagrams,blocks,complexBlocks};
+ return {html:metadataHTML+md.renderer.render(tokens,md.options,env),headings,images,codeBlocks,diagrams,blocks,complexBlocks,tasks:taskItems};
 }

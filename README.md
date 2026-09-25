@@ -8,7 +8,7 @@
 
 Read the brief. Refine the idea. Highlight what matters.
 
-**[Download for Mac](https://github.com/pippo-wtf/folio/releases/download/v0.13.3/Folio.dmg)** · [Features](#features) · [Installation](#installation)
+**[Download for Mac](https://github.com/pippo-wtf/folio/releases/download/v0.13.4/Folio.dmg)** · [Features](#features) · [Installation](#installation)
 
 Apple silicon · macOS 14+ · Free & open source
 
@@ -28,7 +28,9 @@ Beautiful typography. A clean page. Your own Markdown files.
 
 - **Read with room to breathe.** Expressive headings, comfortable serif text and generous spacing, with Folio’s signature Green Line look. Light by day; charcoal, warm text and orange accents after dark.
 - **Write where you read.** Activate the pencil to write directly on the page; turn it off to read and highlight. Keep everyday formatting close with the bottom toolbar.
+- **Give your AI a clear handoff.** Folio records your edits locally. Use **Export Feedback…** to share the exact changes, highlights and comments with Codex, Claude or another agent, so it can follow your feedback without comparing the whole document.
 - **Keep what matters.** Save highlights, add comments and jump back to marked passages from the sidebar.
+- **Tick things off.** Check tasks directly in Read or Write mode, undo a tick, and save the result in your original Markdown file.
 - **See more than plain text.** Render lists, checkboxes, tables, code, callouts, footnotes, equations and diagrams.
 - **Go to the source.** Switch to the underlying Markdown whenever you need it.
 - **Share something polished.** Export a PDF or copy formatted text into another app.
@@ -55,7 +57,7 @@ Beautiful typography. A clean page. Your own Markdown files.
 
 ### Download for Mac
 
-1. **[Download Folio.dmg](https://github.com/pippo-wtf/folio/releases/download/v0.13.3/Folio.dmg).**
+1. **[Download Folio.dmg](https://github.com/pippo-wtf/folio/releases/download/v0.13.4/Folio.dmg).**
 2. Open it and launch **Install Folio**. It installs into your personal **Applications** folder.
 3. Open Folio and choose a Markdown file.
 

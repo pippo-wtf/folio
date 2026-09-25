@@ -87,6 +87,11 @@ struct ReaderWebView: NSViewRepresentable {
                 if let token = body["token"] as? String, let active = body["active"] as? Bool {
                     model.acceptComplexEditorState(token: token, active: active)
                 }
+            case "toggleTask":
+                if let before = body["before"] as? String, let token = body["token"] as? String,
+                   let offset = body["offset"] as? Int, let checked = body["checked"] as? Bool {
+                    model.toggleTask(before: before, offset: offset, checked: checked, token: token)
+                }
             case "editDocument":
                 if let before = body["before"] as? String, let updated = body["text"] as? String, let token = body["token"] as? String {
                     model.acceptRenderedEdit(before: before, text: updated, token: token, passage: body["passage"] as? String ?? "")

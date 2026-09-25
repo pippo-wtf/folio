@@ -86,7 +86,7 @@ export function setupEditing(initial,initialBlocks,complexBlocks,assetPrefix,tok
   const visible=pending.some(n=>n.nodeType===1||n.textContent.trim());
   if(visible){
    const locked=document.createElement('div');locked.className='source-preserved';locked.contentEditable='false';
-   locked.append(...pending);original.set(locked,{raw,locked:true});protectedNodes.push(locked);fragment.append(locked);
+   locked.append(...pending);original.set(locked,{raw,locked:true,start:offset});protectedNodes.push(locked);fragment.append(locked);
   }else{
    const gap=document.createComment('source spacing');original.set(gap,{raw});fragment.append(gap);
   }
@@ -110,9 +110,29 @@ export function setupEditing(initial,initialBlocks,complexBlocks,assetPrefix,tok
   fragment.append(host);offset=block.end;
  }
  preserve(initial.length);root.replaceChildren(fragment);
+
+ // Task lists remain protected source blocks; a toggle changes only one marker.
+ const taskChange=event=>{
+  const box=event.target.closest?.('input[data-task-offset]');if(!box)return;
+  const host=box.closest('.source-preserved'),record=original.get(host);
+  if(!record||!Number.isInteger(record.start))return;
+  const siblings=[...root.childNodes],index=siblings.indexOf(host);
+  const newline=initial.includes('\r\n')?'\r\n':'\n';
+  const prefix=serializeDocument(siblings.slice(0,index),original,null,newline);
+  const offset=prefix.length+Number(box.dataset.taskOffset)-record.start;
+  root.querySelectorAll('input[data-task-offset]').forEach(input=>input.disabled=true);
+  send({type:'toggleTask',token,before:source,offset,checked:box.checked});
+ };
+ root.addEventListener('change',taskChange);
+ activeCleanup=()=>root.removeEventListener('change',taskChange);
  // Identical wrappers in both modes preserve column geometry and block spacing.
- // Reading stops before registering input handlers or making anything editable.
- if(!enabled){root.removeAttribute('contenteditable');root.setAttribute('aria-label','Document');return;}
+ // Reading keeps task controls, but never makes the surrounding text editable.
+ if(!enabled){
+  const historyKey=e=>{if(e.metaKey&&e.key.toLowerCase()==='z'){e.preventDefault();send({type:e.shiftKey?'redoEdit':'undoEdit'});}};
+  root.addEventListener('keydown',historyKey);
+  activeCleanup=()=>{root.removeEventListener('change',taskChange);root.removeEventListener('keydown',historyKey);};
+  root.removeAttribute('contenteditable');root.setAttribute('aria-label','Document');return;
+ }
  // Measure the first visible line, so controls stay aligned at every font size.
  const positionControls=()=>root.querySelectorAll('.complex-passage').forEach(host=>{
   const first=host.querySelector('th,summary,img:not([hidden]),.image-fallback:not([hidden])')||host.firstElementChild;
@@ -305,5 +325,5 @@ export function setupEditing(initial,initialBlocks,complexBlocks,assetPrefix,tok
   document.execCommand(button.dataset.block?'formatBlock':button.dataset.command,false,button.dataset.block||null);commit(active);select();
  });
  root.addEventListener('keydown',keydown);root.addEventListener('input',input);root.addEventListener('paste',paste);root.addEventListener('drop',drop);root.addEventListener('beforeinput',beforeinput);root.addEventListener('click',rootClick);document.addEventListener('selectionchange',select);
- activeCleanup=()=>{observer.disconnect();closePanel();root.setAttribute('aria-label','Document');root.removeAttribute('contenteditable');root.removeAttribute('role');root.removeAttribute('aria-multiline');root.removeEventListener('keydown',keydown);root.removeEventListener('input',input);root.removeEventListener('paste',paste);root.removeEventListener('drop',drop);root.removeEventListener('beforeinput',beforeinput);root.removeEventListener('click',rootClick);document.removeEventListener('selectionchange',select);};
+ activeCleanup=()=>{root.removeEventListener('change',taskChange);observer.disconnect();closePanel();root.setAttribute('aria-label','Document');root.removeAttribute('contenteditable');root.removeAttribute('role');root.removeAttribute('aria-multiline');root.removeEventListener('keydown',keydown);root.removeEventListener('input',input);root.removeEventListener('paste',paste);root.removeEventListener('drop',drop);root.removeEventListener('beforeinput',beforeinput);root.removeEventListener('click',rootClick);document.removeEventListener('selectionchange',select);};
 }

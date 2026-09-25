@@ -108,3 +108,15 @@ test('fenced equations keep display layout after an inline equation',()=>{
  const r=parse('$x$\n\n```math\nx^2\n```');
  assert.match(r.html,/<div class="math-preview"><span class="katex-display">/);
 });
+
+test('interactive tasks map exact source markers without touching code or metadata',()=>{
+ const source='---\r\ntitle: "[ ] Not a task"\r\n---\r\n\r\n😀 Intro\r\n\r\n- [ ] Same\r\n  - [X] Same\r\n\r\n> 1. [ ] Quoted\r\n\r\n```md\r\n- [ ] Code\r\n```\r\n';
+ const result=parse(source,undefined,true);
+ assert.ok(Array.isArray(result.tasks), "Parser must return source-mapped tasks");
+ assert.deepEqual(result.tasks.map(t=>source.slice(t.offset-1,t.offset+2)),['[ ]','[X]','[ ]']);
+ assert.deepEqual(result.tasks.map(t=>t.checked),[false,true,false]);
+ assert.equal(new Set(result.tasks.map(t=>t.offset)).size,3);
+ assert.equal((result.html.match(/data-task-offset=/g)||[]).length,3);
+ assert.ok(!result.html.includes('disabled=""'));
+ assert.match(parse('- [ ] Preview').html,/disabled=""/);
+});
