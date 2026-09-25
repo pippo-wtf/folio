@@ -22,8 +22,8 @@ cat > "$INSTALLER/Contents/Info.plist" <<'PLIST'
 <key>CFBundleExecutable</key><string>InstallFolio</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleIconFile</key><string>Folio</string>
-<key>CFBundleShortVersionString</key><string>0.13.2</string>
-<key>CFBundleVersion</key><string>2026092413</string>
+<key>CFBundleShortVersionString</key><string>0.13.3</string>
+<key>CFBundleVersion</key><string>2026092502</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
