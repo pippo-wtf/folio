@@ -60,7 +60,8 @@ struct WindowChrome: NSViewRepresentable {
             if let hex = UInt32(paper.dropFirst(), radix: 16) {
                 window.backgroundColor = NSColor(srgbRed: CGFloat((hex >> 16) & 255)/255, green: CGFloat((hex >> 8) & 255)/255, blue: CGFloat(hex & 255)/255, alpha: 1)
             } else { window.backgroundColor = dark ? darkColor : lightColor }
-            window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+            // ReaderView.preferredColorScheme owns native appearance. Setting it
+            // here fights SwiftUI during menu transitions and loops toolbar layout.
         }
     }
 }

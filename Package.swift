@@ -18,6 +18,7 @@ let package = Package(
                 .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])
             ]
         ),
-        .testTarget(name: "ReaderCoreTests", dependencies: ["ReaderCore"])
+        .testTarget(name: "ReaderCoreTests", dependencies: ["ReaderCore"]),
+        .testTarget(name: "MarkdownReaderTests", dependencies: ["MarkdownReader"])
     ]
 )
