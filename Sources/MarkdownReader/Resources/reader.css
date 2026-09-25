@@ -18,7 +18,8 @@ body{
  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-wrap:break-word;
 }
 /* Column width describes the text; gutters sit outside that measure. */
-main{width:100%;max-width:calc(60ch + 96px);margin:0 auto;padding:72px 48px 132px}
+/* Keep WebKit selection-gap painting inside the reading column, not the body. */
+main{position:relative;width:100%;max-width:calc(60ch + 96px);margin:0 auto;padding:72px 48px 132px}
 main>:first-child{margin-top:0}
 main>:last-child{margin-bottom:0}
 h1,h2,h3,h4,h5,h6{
