@@ -66,22 +66,11 @@ You don’t need Node.js, Xcode, an AI subscription or another Markdown app to r
 
 Folio is Developer ID signed and Apple-notarized. On first launch, you can choose whether Folio opens your Markdown files by default.
 
-### Install with Homebrew
-
-If you already use [Homebrew](https://brew.sh), install from the Folio tap:
-
-```sh
-brew install --cask --appdir="$HOME/Applications" pippo-wtf/tap/folio
-```
-
-Homebrew is optional. The direct download is the simplest way to start.
-
 ### Updating
 
 Folio shows available updates and release notes. Choose **Update** to download, then **Install & Relaunch** when ready. Nothing installs automatically.
 For versions older than 0.13, install the new download once to enable in-app updates.
 Your documents and saved preferences stay in place.
-For a Homebrew installation, use `brew update` followed by `brew upgrade --cask pippo-wtf/tap/folio`.
 
 ## Made by Pippo
 
