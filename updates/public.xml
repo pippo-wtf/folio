@@ -6,6 +6,16 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Folio</title>
         <item>
+            <title>0.13.3</title>
+            <pubDate>Fri, 25 Sep 2026 10:09:39 +0200</pubDate>
+            <sparkle:version>2026092502</sparkle:version>
+            <sparkle:shortVersionString>0.13.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <sparkle:releaseNotesLink sparkle:edSignature="TXD+H1NVBCkoxfegeefgcJUbo7ojYx9nx18TmaXGGZMzuhlK9rz/Y5IoyZaXf/egPmySKS1G1IMfYIF7ly/sCw==" sparkle:length="739">https://raw.githubusercontent.com/pippo-wtf/folio/main/updates/Folio-0.13.3.md</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/pippo-wtf/folio/releases/download/v0.13.3/Folio-0.13.3.zip" length="9349911" type="application/octet-stream" sparkle:edSignature="4vGvETG58BQzQqmUcLGo9RVmGml3oVESYpypbe+ZE7mquyPf46qcKycCqn1rC3OPuiHkWGe71uQ7G40VEN/RAg=="/>
+        </item>
+        <item>
             <title>0.13.2</title>
             <pubDate>Thu, 24 Sep 2026 22:15:16 +0200</pubDate>
             <sparkle:version>2026092413</sparkle:version>
@@ -28,6 +38,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 1nWFWLMDFVKtMnRWmaVBi6Kmlg0ttfdMDFCOYuZzgLbLnVREdk2tfwgnvXnfF0OEW9BOVTQourxrlNNvQnk1Aw==
-length: 2357
+edSignature: uF0oAcUUw9jPTrNyIp61YW0ir1qvykjK081imJeg5pgtlue6uUVmGbpHyL7xtWQ2R+ziiXjoYMcXBNiXIIdJBw==
+length: 3321
 -->
