@@ -425,7 +425,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     private var highlightKey: String { fileURL?.standardizedFileURL.resolvingSymlinksInPath().path ?? (isWelcome ? "folio:welcome" : untitledKey) }
     private var editJournalKey: String { fileURL?.standardizedFileURL.resolvingSymlinksInPath().path ?? untitledKey }
 
-    func saveHighlights(_ records: [SavedHighlight], token: String) {
+    func saveHighlights(_ records: [SavedHighlight], token: String, commentID: String? = nil) {
         guard token == highlightToken, highlightsReadable, HighlightStore.valid(records) else { return }
         do {
             let saved = records.map { record -> SavedHighlight in
@@ -440,12 +440,16 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             let data = try JSONEncoder().encode(saved)
             let value = try JSONSerialization.jsonObject(with: data)
             script("highlightsSaved", [token, value])
+            if let commentID, saved.contains(where: { $0.id == commentID }) {
+                DispatchQueue.main.async { [weak self] in self?.commentOnHighlight(commentID, token: token) }
+            }
         } catch {
             lastErrorCode = "highlight_save_failed"
             script("highlightSaveFailed", [token])
         }
     }
-    func commentOnHighlight(_ id: String) {
+    func commentOnHighlight(_ id: String, token requestToken: String? = nil) {
+        guard requestToken == nil || requestToken == highlightToken else { return }
         guard let index = marked.firstIndex(where: { $0.id == id }) else { return }
         let alert = NSAlert(); alert.messageText = "Comment on this passage"
         alert.informativeText = String(marked[index].quote.prefix(220))

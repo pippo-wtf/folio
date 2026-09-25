@@ -1,10 +1,11 @@
-import {anchor,locate,overlaps,unionSelection} from './highlight-anchors.js';
+import {anchor,locate,overlaps,unionSelection,commentTarget} from './highlight-anchors.js';
 let root,token='',records=[],writable=false,pending=null,busy=false,selecting=false,timer;
 const send=message=>window.webkit?.messageHandlers.folio.postMessage(message);
 const toolbar=document.createElement('div');toolbar.id='highlight-tools';toolbar.hidden=true;toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','Text highlighting');
 const save=document.createElement('button');save.type='button';save.textContent='Highlight';save.title='Save highlight (⇧⌘H)';
 const remove=document.createElement('button');remove.type='button';remove.textContent='Remove highlight';
-toolbar.append(save,remove);document.body.append(toolbar);
+const comment=document.createElement('button');comment.type='button';comment.textContent='Comment…';
+toolbar.append(save,comment,remove);document.body.append(toolbar);
 const status=document.createElement('div');status.id='highlight-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.hidden=true;document.body.append(status);
 function announce(text){clearTimeout(timer);status.textContent=text;status.hidden=false;timer=setTimeout(()=>status.hidden=true,6000);}
 function nodes(){
@@ -63,12 +64,12 @@ function update(){
  if(!selected){toolbar.hidden=true;return;}
  save.hidden=false;remove.hidden=!records.some(r=>{const found=locate(text,r);return found&&overlaps(found,range);});show(range.rect);
 }
-function commit(next){
+function commit(next,commentID=null){
  if(busy||!writable)return;
  if(next.length>1000){announce('This document has reached its limit of 1,000 highlights.');return;}
  if(new TextEncoder().encode(JSON.stringify(next)).length>1900000){announce('Highlight storage is full for this document. Remove a highlight first.');return;}
- busy=true;save.disabled=true;remove.disabled=true;
- send({type:'saveHighlights',token,highlights:next});
+ busy=true;save.disabled=true;remove.disabled=true;comment.disabled=true;
+ send({type:'saveHighlights',token,highlights:next,commentID});
 }
 export function highlightSelection(){
  const range=selection()||pending;
@@ -85,7 +86,15 @@ function removeSelection(){
  const text=contents(),ids=pending.ids;
  commit(records.filter(r=>{if(ids)return !ids.includes(r.id);const range=locate(text,r);return !range||!overlaps(range,pending);}));
 }
-for(const button of [save,remove])button.addEventListener('pointerdown',e=>e.preventDefault());
+function commentSelection(){
+ const target=commentTarget(contents(),records,selection()||pending,newID());
+ if(!target||!writable||busy)return;
+ if(records.some(r=>r.id===target.id))send({type:'commentHighlight',token,id:target.id});
+ else commit([...records,target],target.id);
+ toolbar.hidden=true;
+}
+comment.addEventListener('click',commentSelection);
+for(const button of [save,comment,remove])button.addEventListener('pointerdown',e=>e.preventDefault());
 save.addEventListener('click',highlightSelection);remove.addEventListener('click',removeSelection);
 document.addEventListener('selectionchange',()=>setTimeout(update,0));
 document.addEventListener('pointerdown',event=>{if(root?.contains(event.target)){selecting=true;toolbar.hidden=true;}});
@@ -101,16 +110,16 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){toolbar.hidden=true
 window.addEventListener('scroll',()=>toolbar.hidden=true,{passive:true});
 window.addEventListener('resize',()=>toolbar.hidden=true);
 export function restoreHighlights(documentToken,saved,canSave){
- root=document.getElementById('document');token=documentToken;records=saved||[];writable=canSave;pending=null;busy=false;toolbar.hidden=true;status.hidden=true;save.disabled=false;remove.disabled=false;
+ root=document.getElementById('document');token=documentToken;records=saved||[];writable=canSave;pending=null;busy=false;toolbar.hidden=true;status.hidden=true;save.disabled=false;remove.disabled=false;comment.disabled=false;
  const missing=paint();if(missing)announce(`${missing} saved highlight${missing===1?' could':'s could'} not be located after the text changed.`);
 }
 export function highlightsSaved(documentToken,saved){
  if(token!==documentToken)return;
- records=saved;busy=false;save.disabled=false;remove.disabled=false;pending=null;toolbar.hidden=true;window.getSelection()?.removeAllRanges();paint();announce('Highlights saved.');
+ records=saved;busy=false;save.disabled=false;remove.disabled=false;comment.disabled=false;pending=null;toolbar.hidden=true;window.getSelection()?.removeAllRanges();paint();announce('Highlights saved.');
 }
 export function highlightSaveFailed(documentToken){
  if(token!==documentToken)return;
- busy=false;save.disabled=false;remove.disabled=false;announce('The highlight could not be saved. Please try again.');
+ busy=false;save.disabled=false;remove.disabled=false;comment.disabled=false;announce('The highlight could not be saved. Please try again.');
 }
 
 export function navigateHighlight(id){

@@ -112,7 +112,11 @@ struct ReaderWebView: NSViewRepresentable {
                 if let token = body["token"] as? String, let array = body["highlights"],
                    let data = try? JSONSerialization.data(withJSONObject: array), data.count <= 2_000_000,
                    let records = try? JSONDecoder().decode([SavedHighlight].self, from: data) {
-                    model.saveHighlights(records, token: token)
+                    model.saveHighlights(records, token: token, commentID: body["commentID"] as? String)
+                }
+            case "commentHighlight":
+                if let token = body["token"] as? String, let id = body["id"] as? String {
+                    DispatchQueue.main.async { [weak model] in model?.commentOnHighlight(id, token: token) }
                 }
             case "printReady":
                 if let token = body["token"] as? String { model.finishPrint(token: token) }

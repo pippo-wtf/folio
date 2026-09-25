@@ -28,3 +28,17 @@ test('selection bounds and overlapping marks',()=>{
 test('overlapping selections preserve the whole existing mark',()=>{
  assert.deepEqual(unionSelection({start:5,end:12},[{start:11,end:20},{start:0,end:8},{start:30,end:40}]),{start:0,end:20});
 });
+
+test('comment targets reuse exact highlights without absorbing neighboring feedback',async()=>{
+ const {commentTarget}=await import('../web/highlight-anchors.js');
+ assert.equal(typeof commentTarget,'function');
+ const text='First passage. Second passage.';
+ const first={...anchor(text,0,14,'first'),comment:'Keep this'};
+ const second=anchor(text,15,text.length,'second');
+ assert.equal(commentTarget(text,[first,second],{start:0,end:14},'new').id,'first');
+ assert.equal(commentTarget(text,[first,second],{ids:['second']},'new').id,'second');
+ const fresh=commentTarget(text,[first,second],{start:6,end:22},'new');
+ assert.equal(fresh.quote,text.slice(6,22));assert.equal(fresh.id,'new');
+ assert.equal(first.comment,'Keep this');
+ assert.equal(commentTarget(text,[first],{ids:['missing']},'new'),null);
+});

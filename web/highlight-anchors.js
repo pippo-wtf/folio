@@ -20,3 +20,11 @@ export function unionSelection(selection,ranges){
  do{changed=false;for(const range of ranges){if(overlaps(result,range)){const a=Math.min(result.start,range.start),b=Math.max(result.end,range.end);if(a!==result.start||b!==result.end){result.start=a;result.end=b;changed=true;}}}}while(changed);
  return result;
 }
+
+// Comments attach to an exact passage, never a merged neighboring highlight.
+export function commentTarget(text,records,selection,id){
+ if(!selection)return null;
+ if(selection.ids)return records.find(r=>selection.ids.includes(r.id))||null;
+ const existing=records.find(r=>{const found=locate(text,r);return found&&found.start===selection.start&&found.end===selection.end;});
+ return existing||anchor(text,selection.start,selection.end,id);
+}
