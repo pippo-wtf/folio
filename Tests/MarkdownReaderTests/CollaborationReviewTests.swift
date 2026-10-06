@@ -170,4 +170,32 @@ final class CollaborationReviewTests: XCTestCase {
         await c.stopWatching()
     }
 
+    @MainActor func testActualNativeBridgeSharedCommentAfterCheckboxCreatesComposer() async throws {
+        _ = NSApplication.shared
+        let (c, source, _) = try await fixture()
+        let model = ReaderModel(collaboration: c)
+        model.recoveryStartupReady = true; model.load(source)
+        for _ in 0..<200 where model.loading { try await Task.sleep(for: .milliseconds(10)) }
+        let (view, bridge) = try await CollaborationRendererTests().web(model: model)
+        defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
+        model.sharedReview.mode = .shared; model.refreshSharedReview(); c.sourceSavingEnabled = true
+        _ = try await view.evaluateJavaScript("void 0")
+        _ = try await view.evaluateJavaScript("document.querySelector('#document input[type=checkbox]').click(); void 0")
+        for _ in 0..<300 where !model.text.contains("[x]") || model.sharedReview.busy { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertTrue(model.text.contains("[x]")); XCTAssertFalse(model.dirty)
+        _ = try await view.evaluateJavaScript("window.range=document.createRange(); range.selectNodeContents(document.querySelector('#document h1')); getSelection().removeAllRanges(); getSelection().addRange(range); void 0")
+        try await Task.sleep(for: .milliseconds(50))
+        let selection = try await view.evaluateJavaScript("Folio.sharedSelection('\(model.reviewRenderToken)')") as? [String: Any]
+        XCTAssertEqual(selection?["quote"] as? String, "Quote")
+        _ = try await view.evaluateJavaScript("document.querySelectorAll('#highlight-tools button')[1].focus(); document.querySelectorAll('#highlight-tools button')[1].click(); void 0")
+        for _ in 0..<300 where c.state?.annotations.isEmpty == true || model.sharedReview.busy { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(bridge.messages.filter { $0["type"] as? String == "sharedSelectionAction" }.count, 1)
+        XCTAssertEqual(c.state?.annotations.count, 1, model.sharedReview.issue ?? "No shared annotation and no issue")
+        XCTAssertNotNil(model.sharedReview.selectedThread)
+        XCTAssertEqual(model.sharedReview.mode, .shared)
+        XCTAssertNil(model.sharedReview.issue)
+        XCTAssertFalse(model.dirty)
+        await c.stopWatching()
+    }
+
 }
