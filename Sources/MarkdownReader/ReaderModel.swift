@@ -24,7 +24,12 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     @Published var presets: [ReadingPreset] = []
     @Published var selectedPresetID: UUID?
     private var presetsReadable = true
-    init() {
+    private let pasteboardWriter: (String) -> Bool
+    init(pasteboardWriter: @escaping (String) -> Bool = { source in
+        NSPasteboard.general.clearContents()
+        return NSPasteboard.general.setString(source, forType: .string)
+    }) {
+        self.pasteboardWriter = pasteboardWriter
         if let data = UserDefaults.standard.data(forKey: "readingPresetsV1") {
             if let values = try? JSONDecoder().decode([ReadingPreset].self, from: data), ReadingPreset.validLibrary(values) {
                 presets = values
@@ -288,6 +293,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     @Published var editingEnabled = false {
         didSet {
             guard oldValue != editingEnabled else { return }
+            cancelCopyContent()
             _ = flushEditJournal()
             if !editingEnabled && writing { writing = false }
             else { render() }
@@ -296,6 +302,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     @Published var writing = false {
         didSet {
             guard oldValue != writing else { return }
+            cancelCopyContent()
             pageEditTime = .distantPast
             if writing { editingEnabled = true; flushEditJournal(); sourceEntry = text }
             else {
@@ -306,10 +313,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         }
     }
     @Published var baseline = ""
-    @Published var documentID = UUID() { didSet { clearPageHistory() } }
+    @Published var documentID = UUID() { didSet { cancelCopyContent(); clearPageHistory() } }
     var snapshot: DocumentSnapshot?
     var dirty: Bool { text != baseline }
-    weak var editor: NSTextView?
+    weak var editor: NSTextView? { didSet { if oldValue !== editor { cancelCopyContent() } } }
     func confirmLeave() -> Bool {
         flushRecovery()
         _ = flushEditJournal()
@@ -414,12 +421,12 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     private var revisionSize: Int?
     private var generation = 0
     weak var webView: WKWebView?
-    var ready = false
+    var ready = false { didSet { if !ready { cancelCopyContent() } } }
     let assetHandler = LocalAssets()
     private var lastErrorCode = "none"
 
     private let highlightStore = HighlightStore(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("\(BuildChannel.storage)/Highlights"))
-    private var highlightToken = ""
+    private var highlightToken = "" { didSet { if oldValue != highlightToken { cancelCopyContent() } } }
     private var highlightsReadable = false
     private var isWelcome = true
     private var untitledKey = "folio:draft:" + UUID().uuidString
@@ -814,6 +821,93 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         }
     }
     @Published var preparingPrint = false
+    @Published var copyContentBusy = false
+    @Published private(set) var contentCopied = false
+    private struct ContentRequest {
+        let id: UUID
+        let document: UUID
+        let sourceMode: Bool
+        let editing: Bool
+        let token: String
+        let editorID: ObjectIdentifier?
+    }
+    private var contentRequest: ContentRequest?
+    private var contentTimeout: Task<Void, Never>?
+    private var copiedStatusTask: Task<Void, Never>?
+    private func currentContentRequest(_ id: UUID) -> ContentRequest? {
+        guard let request = contentRequest, request.id == id,
+              request.document == documentID, request.sourceMode == writing,
+              request.editing == editingEnabled, request.token == highlightToken else { return nil }
+        return request
+    }
+    func cancelCopyContent(message: String = "The editor changed before copying. Try Copy content again.") {
+        guard contentRequest != nil else { return }
+        contentRequest = nil; contentTimeout?.cancel(); contentTimeout = nil
+        copyContentBusy = false; contentCopied = false; error = message
+    }
+    func copyContent() {
+        guard !loading, !preparingPrint, contentRequest == nil else { return }
+        copiedStatusTask?.cancel(); contentCopied = false
+        let id = UUID()
+        contentRequest = ContentRequest(id: id, document: documentID, sourceMode: writing,
+            editing: editingEnabled, token: highlightToken, editorID: editor.map(ObjectIdentifier.init))
+        copyContentBusy = true
+        contentTimeout = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(15)) } catch { return }
+            guard self?.currentContentRequest(id) != nil else { return }
+            self?.cancelCopyContent(message: "The editor hasn’t finished preparing the content. Finish your edit, then try Copy content again.")
+        }
+        if writing {
+            guard let editor else { cancelCopyContent(message: "The source editor is unavailable. Reopen Source, then try Copy content again."); return }
+            if !editor.hasMarkedText() { finishSourceContent(editor, requestID: id) }
+            return
+        }
+        guard ready, let webView else { cancelCopyContent(message: "The reading view is not ready. Reopen the document, then try Copy content again."); return }
+        webView.evaluateJavaScript("window.Folio.requestContent('\(id.uuidString)')") { [weak self] _, failure in
+            Task { @MainActor in
+                guard failure != nil, self?.currentContentRequest(id) != nil else { return }
+                self?.cancelCopyContent(message: "The reading view couldn’t prepare the content. Reopen the document, then try Copy content again.")
+            }
+        }
+    }
+    func sourceEditorPostChange(_ view: NSTextView) {
+        guard let request = contentRequest, request.sourceMode else { return }
+        DispatchQueue.main.async { [weak self, weak view] in
+            guard let self, let view, !view.hasMarkedText() else { return }
+            self.finishSourceContent(view, requestID: request.id)
+        }
+    }
+    private func finishSourceContent(_ view: NSTextView, requestID: UUID) {
+        guard let request = currentContentRequest(requestID), request.sourceMode,
+              editor === view, request.editorID == ObjectIdentifier(view), !view.hasMarkedText() else { return }
+        sourceEditorDidChange(view.string)
+        guard text == view.string else { cancelCopyContent(message: "The source editor couldn’t synchronize. Try Copy content again."); return }
+        finishContent(view.string, requestID: requestID)
+    }
+    func acceptContentSnapshot(requestID: String, token: String, text snapshot: String) {
+        guard let id = UUID(uuidString: requestID), let request = currentContentRequest(id),
+              !request.sourceMode, token == request.token else { return }
+        guard snapshot == text else { cancelCopyContent(message: "The editor couldn’t synchronize the current content. Try Copy content again."); return }
+        finishContent(snapshot, requestID: id)
+    }
+    func rejectContentSnapshot(requestID: String, token: String, message: String) {
+        guard let id = UUID(uuidString: requestID), let request = currentContentRequest(id), token == request.token else { return }
+        cancelCopyContent(message: String(message.prefix(300)))
+    }
+    private func finishContent(_ source: String, requestID: UUID) {
+        guard currentContentRequest(requestID) != nil else { return }
+        // Invalidate before writing so duplicate or late callbacks cannot write again.
+        contentRequest = nil; contentTimeout?.cancel(); contentTimeout = nil; copyContentBusy = false
+        guard !source.isEmpty else { error = "The document is empty. There’s nothing to copy."; return }
+        guard pasteboardWriter(source) else { error = "Couldn’t copy the content. Try again."; return }
+        contentCopied = true
+        NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
+            userInfo: [.announcement: "Copied", .priority: NSAccessibilityPriorityLevel.medium.rawValue])
+        copiedStatusTask = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(1500)) } catch { return }
+            self?.contentCopied = false
+        }
+    }
     func copyFormatted() {
         guard !writing else { error = "Close Source and select a passage to copy its formatting."; return }
         script("copyFormatted", [])

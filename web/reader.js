@@ -3,11 +3,13 @@ import {parse} from './parser.js';
 import {applyLayout} from './layout.js';
 import {restoreHighlights,highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight} from './highlights.js';
 import {renderDiagrams} from './diagrams.js';
+let editorController=null;
 let codes=[],renderVersion=0,positionToken='',positionTimer;
 let restoring=false,diagramWork=Promise.resolve();
 const send=message=>window.webkit?.messageHandlers.folio.postMessage(message);
 window.Folio={
  highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,
+ requestContent(requestID){if(!editorController)throw new Error('The editor is not ready');editorController.requestContent(requestID);},
  focusTask(offset){document.querySelector(`input[data-task-offset="${Number(offset)}"]`)?.focus({preventScroll:true});},
  updateCode(index,text){if(Number.isInteger(index)&&index>=0&&index<codes.length)codes[index]=text;},
  finishExport(){
@@ -64,9 +66,10 @@ window.Folio={
    const selection=getSelection(),range=document.createRange();range.selectNodeContents(previousHost);
    if(previousHost.contains(selection.focusNode)){range.setEnd(selection.focusNode,selection.focusOffset);caret={id:previousHost.dataset.edit,offset:range.toString().length};}
   }
+  editorController?.cleanup();
   document.getElementById('document').innerHTML=result.html;
   document.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false;}));
-  setupEditing(markdown,result.blocks,result.complexBlocks,assetPrefix,highlightToken,editing,send);
+  editorController=setupEditing(markdown,result.blocks,result.complexBlocks,assetPrefix,highlightToken,editing,send);
   restoreHighlights(highlightToken,highlights,canSaveHighlights);
   if(caret&&editing){
    const host=document.getElementById('document');

@@ -456,6 +456,13 @@ struct ReaderView: View {
                 Label("More", systemImage: "ellipsis.circle")
             }
             .help("Image folder access and diagnostics")
+            if model.contentCopied {
+                Text("Copied").font(.callout).foregroundStyle(accentColor)
+                    .accessibilityLabel("Copied")
+            }
+            Button("Copy content") { model.copyContent() }
+                .help("Copy the complete current Markdown source")
+                .disabled(model.loading || model.preparingPrint || model.copyContentBusy)
         }
     }
 }
