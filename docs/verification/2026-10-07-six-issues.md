@@ -13,6 +13,7 @@ Candidate: Folio 0.14.0, build 2026100616. Regular Folio and Folio Staging are i
 - Full native suite: 255 tests, zero failures, one focus-only skip. Command: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test --build-system native --scratch-path /private/tmp/folio-public-release-tests`.
 - Renderer suite: 58/58 tests pass (`npm test`).
 - New coverage: `SidebarScrollIndicatorTests`, `ComplexEditingAcceptanceTests`, `UnicodeSourceIdentityTests`, `NarrowLayoutAcceptanceTests`, plus copy, shared-task and journal regressions.
+- The normal-motion test explicitly pins Reduce Motion off; a separate test enables it, independent of CI host preferences.
 - Sidebar tests render the actual AppKit indicator: 3px neutral thumb, 5px inset, 700ms idle delay, 200ms fade, reduced-motion immediate hide, no thumb on short lists, no invisible hit target.
 - Complex editing tests use WKWebView: code/language, links, images, table cells and row/column operations; cancel, independent undo/redo, exact unrelated source preservation, disk save/reopen, labels and unsafe-input rejection.
 - Unicode regressions were run failing before correction and passing afterward. Copy uses a real WKWebView and native editor synchronization uses NSTextView. Shared-save race coverage confirms a newer draft remains intact.
@@ -22,7 +23,7 @@ Candidate: Folio 0.14.0, build 2026100616. Regular Folio and Folio Staging are i
 
 Only disposable Markdown files were edited. In regular Folio, keyboard paste changed a code block from `42` to `43`; Apply/Save wrote `43`, Undo/Save wrote `42`, Redo/Save wrote `43`. Reopening retained the saved value. A mouse-selected passage accepted a private comment; both highlight and exact comment survived normal quit, replacement and relaunch. The Marked sidebar entry retained its comment and keyboard jump.
 
-A 60-heading Contents list was scrolled and navigated with the keyboard. Public (dark) and Staging (light) active/idle screenshots show the custom thumb and its disappearance, without a native track. A separate disposable document contains 30 seeded saved marks for long-list navigation testing; these fixtures are not presented as user-created comments. Narrow-window screenshots verify the corrected title wrapping and gutters at 580×520 including the sidebar. The formatting strip remains horizontally scrollable through its last action (WKWebView assertion).
+A 60-heading Contents list was scrolled and navigated with the keyboard. Public (dark) and Staging (light) active/idle screenshots show the custom thumb and its disappearance, without a native track. A separate disposable document contains 30 seeded saved marks for long-list navigation testing; these fixtures are not presented as user-created comments. With native sidebar focus, Down moved selection from mark 06 to 07 and scrolled the document to the selected passage. Narrow-window screenshots verify the corrected title wrapping and gutters at 580×520 including the sidebar. The formatting strip remains horizontally scrollable through its last action (WKWebView assertion).
 
 Screenshots in the adjacent `six-issues` directory use only disposable text.
 
