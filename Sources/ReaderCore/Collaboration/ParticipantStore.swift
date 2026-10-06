@@ -27,7 +27,7 @@ public struct ParticipantStore {
         return name
     }
 
-    private func load() throws -> ParticipantProfile? {
+    public func load() throws -> ParticipantProfile? {
         let handle: FileHandle
         do { handle = try FileHandle(forReadingFrom: profileURL) }
         catch let error as CocoaError where error.code == .fileReadNoSuchFile || error.code == .fileNoSuchFile { return nil }

@@ -74,6 +74,11 @@ struct ReaderView: View {
                 .preferredColorScheme(isDark ? .dark : .light)
                 .presentationBackground(paperColor)
         }
+        .sheet(isPresented: $collaboration.showNameOnboarding) {
+            NameOnboarding(coordinator: collaboration, headingFont: model.layout.headingFont,
+                           paper: paperColor, ink: inkColor)
+                .preferredColorScheme(isDark ? .dark : .light).presentationBackground(paperColor)
+        }
         .sheet(isPresented: $collaboration.showFolderSheet) {
             if BuildChannel.collaborationAvailable {
                 SharedFolderSheet(coordinator: collaboration, model: model, paper: paperColor, ink: inkColor, accent: accentColor)
@@ -88,7 +93,7 @@ struct ReaderView: View {
         }
         .onChange(of: collaboration.state) { _, _ in model.refreshSharedReview() }
         .onChange(of: collaboration.currentDocument) { _, _ in model.refreshSharedReview() }
-        .task { await collaboration.restore() }
+        .task { await collaboration.prepareIdentity(); await collaboration.restore() }
         .onAppear {
             let action = openWindow
             DispatchQueue.main.async { ReaderWindowPresenter.shared.install { action(id: "reader") } }

@@ -394,6 +394,9 @@ private final class CollaborationWorkspaceWorker: @unchecked Sendable {
     @Published private(set) var busy = false
     @Published private(set) var isWatching = false
     @Published private(set) var sourceAccessUnverified: Bool
+    @Published var showNameOnboarding = false
+    @Published private(set) var onboardingError: String?
+    private var identityPrepared = false
     @Published var showFolderSheet = false
     @Published var sourceSavingEnabled = false
     @Published private(set) var lastSourceSave: SharedSaveOutcome?
@@ -430,6 +433,43 @@ private final class CollaborationWorkspaceWorker: @unchecked Sendable {
     }
     private func begin() { operations += 1; busy = true }
     private func end() { operations -= 1; busy = operations > 0 }
+    func prepareIdentity() async {
+        guard enabled, !identityPrepared else { return }
+        identityPrepared = true
+        begin(); defer { end() }
+        do {
+            let saved = try await run { worker in
+                let value = try worker.identityStore.load()
+                worker.profile = value
+                return value
+            }
+            profile = saved
+            showNameOnboarding = saved == nil
+        } catch {
+            showNameOnboarding = true
+            onboardingError = "Your saved name could not be read. Your existing identity has been kept."
+        }
+    }
+    func saveOnboardingName(_ name: String) async {
+        guard enabled, !busy else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard CollaborationIO.validName(trimmed) else {
+            onboardingError = "Please enter a short name using ordinary letters and spaces."
+            return
+        }
+        begin(); defer { end() }
+        do {
+            profile = try await run { worker in
+                let value = try worker.identityStore.loadOrCreate(displayName: trimmed)
+                worker.profile = value
+                return value
+            }
+            onboardingError = nil
+            showNameOnboarding = false
+        } catch {
+            onboardingError = "Your name could not be saved. Please try again; your existing identity has been kept."
+        }
+    }
     func restore() async {
         guard enabled, workspaceID == nil, !busy else { return }
         // No absent active record means no workspace and no watcher/store creation.
