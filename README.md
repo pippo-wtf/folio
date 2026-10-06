@@ -8,7 +8,7 @@
 
 Read what your agent wrote. Mark what matters. Comment on what needs to change.
 
-**[Download for Mac](https://github.com/pippo-wtf/folio/releases/download/v0.13.8/Folio.dmg)** · [Features](#features) · [Installation](#installation)
+**[Download for Mac](https://github.com/pippo-wtf/folio/releases/download/v0.14.0/Folio.dmg)** · [Features](#features) · [Installation](#installation)
 
 Apple silicon · macOS 14+ · Free & open source
 
@@ -37,11 +37,11 @@ Beautiful typography. A clean page. Your own Markdown files.
 - **Share something polished.** Export a PDF or copy formatted text into another app.
 - **Keep your files yours.** Open and save regular `.md` files. No proprietary library to move into.
 
-## Shared review · Staging preview
+## Review together
 
 Review Markdown together in a shared folder: highlight passages, leave comments and see who completed a task. Private marks stay private, and conflicting text edits are kept for review.
 
-[Try the Staging workflow](docs/COLLABORATION-STAGING.md). Two-Mac OneDrive acceptance is still pending; this preview is not included in the public download.
+Available in regular Folio 0.14. Choose your name, then add an already shared OneDrive folder. [Shared review guide](docs/SHARED-REVIEW.md).
 
 ## A closer look
 
@@ -64,7 +64,7 @@ Review Markdown together in a shared folder: highlight passages, leave comments 
 
 ### Download for Mac
 
-1. **[Download Folio.dmg](https://github.com/pippo-wtf/folio/releases/download/v0.13.8/Folio.dmg).**
+1. **[Download Folio.dmg](https://github.com/pippo-wtf/folio/releases/download/v0.14.0/Folio.dmg).**
 2. Open it and launch **Install Folio**. It installs into your personal **Applications** folder.
 3. Open Folio and choose a Markdown file.
 

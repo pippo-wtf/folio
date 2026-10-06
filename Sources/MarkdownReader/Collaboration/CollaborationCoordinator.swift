@@ -605,7 +605,7 @@ private final class CollaborationWorkspaceWorker: @unchecked Sendable {
     }
     var destinationChangingSaveBlocked: Bool { enabled && sourceAccessUnverified }
     func save(document: SharedDocumentRef, baseline: DocumentSnapshot, draft: String, triggerEventID: UUID? = nil) async throws -> SharedSaveOutcome {
-        guard enabled, sourceSavingEnabled, !sourceAccessUnverified, workspaceID == document.workspaceID else { throw CollaborationError.invalid("Shared source saving is disabled. Enable the disposable Staging pilot to save this source.") }
+        guard enabled, sourceSavingEnabled, !sourceAccessUnverified, workspaceID == document.workspaceID else { throw CollaborationError.invalid("Shared source saving is disabled. Enable changes to shared Markdown files in Shared review to save this source.") }
         begin(); let token = generation; defer { end() }
         do {
             let outcome = try await run { try $0.saveSource(document, baseline: baseline, draft: draft, trigger: triggerEventID) }
@@ -690,7 +690,7 @@ private final class CollaborationWorkspaceWorker: @unchecked Sendable {
         if let failure = failure as? CollaborationError {
             switch failure {
             case .identityConflict: status = .identityConflict; error = "Workspace or document identity conflicts. Choose Reconnect; existing files were kept."
-            case .capacityExceeded: status = .capacityExceeded; error = "This workspace exceeds the pilot limits. Export local evidence and use a smaller disposable workspace."
+            case .capacityExceeded: status = .capacityExceeded; error = "This workspace exceeds the supported limits. Export local evidence and use a smaller workspace."
             case .invalid(let message): status = .unavailable; error = message
             default: status = .unavailable; error = "The shared folder is unavailable. Retry or reconnect; the last readable review is retained."
             }

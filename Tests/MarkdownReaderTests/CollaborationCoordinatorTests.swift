@@ -81,7 +81,7 @@ final class CollaborationCoordinatorTests: XCTestCase {
         XCTAssertNil(c.workspaceID); XCTAssertFalse(c.isWatching)
         XCTAssertFalse(FileManager.default.fileExists(atPath: local.path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: shared.appendingPathComponent("Folio Review").path))
-        #if FOLIO_STAGING && !FOLIO_UPDATE_TEST
+        #if !FOLIO_UPDATE_TEST
         XCTAssertTrue(BuildChannel.collaborationAvailable)
         #else
         XCTAssertFalse(BuildChannel.collaborationAvailable)

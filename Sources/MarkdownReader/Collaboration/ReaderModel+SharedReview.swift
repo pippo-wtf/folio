@@ -304,7 +304,7 @@ extension ReaderModel {
         applySharedTask(id, trigger: event.id, value: value)
     }
     private func applySharedTask(_ id: UUID, trigger: UUID, value: SharedTaskState) {
-        guard let document = collaboration.currentDocument, let baseline = snapshot, collaboration.sourceSavingEnabled, !dirty, !sharedSaveBusy else { sharedReview.busy = false; sharedReview.issue = "Task status saved · Markdown update pending. Save your draft and enable the disposable source pilot to apply it."; return }
+        guard let document = collaboration.currentDocument, let baseline = snapshot, collaboration.sourceSavingEnabled, !dirty, !sharedSaveBusy else { sharedReview.busy = false; sharedReview.issue = "Task status saved · Markdown update pending. Save your draft and allow shared Markdown changes in Shared review to apply it."; return }
         let generation = documentID
         sharedReview.busy = true
         requestContentSnapshot { [weak self] source in
