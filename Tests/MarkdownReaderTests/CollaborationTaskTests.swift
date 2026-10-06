@@ -15,7 +15,20 @@ final class CollaborationTaskTests: XCTestCase {
         for status in [SharedTaskState.open, .inProgress, .done, .open] {
             let result = await c.setSharedTask(document: doc, taskID: task, state: status)
             XCTAssertNotNil(result)
-            XCTAssertEqual(c.sharedTaskStates(taskID: task), [status])
+            XCTAssertEqual(c.sharedTaskStates(taskID: task), [status == .done ? .done : .open])
+            if let event = c.events.first(where: { $0.id == result }), case .taskState(_, let written, _, _) = event.payload {
+                XCTAssertNotEqual(written, .inProgress, "New events must use binary checkbox states")
+            }
+        }
+        let heads = c.state?.taskHeads[task] ?? []
+        let origin = try XCTUnwrap(c.state?.tasks[task])
+        let profile = try XCTUnwrap(c.profile)
+        let legacy = CollaborationEvent(workspaceID: doc.workspaceID, documentID: doc.documentID, participantID: profile.participantID, deviceID: profile.deviceID, authorName: profile.displayName, rawSourceRevision: raw, parents: heads + [origin.id], payload: .taskState(taskID: task, state: .inProgress, supersedes: heads, rawSourceRevision: raw))
+        let accepted = await c.submit(legacy)
+        XCTAssertTrue(accepted)
+        XCTAssertEqual(c.sharedTaskStates(taskID: task), [.open], "Legacy unfinished work is an open checkbox")
+        if case .taskState(_, let historicalState, _, _) = legacy.payload {
+            XCTAssertEqual(historicalState, .inProgress, "Do not rewrite historical shared events")
         }
         XCTAssertEqual(try Data(contentsOf: source), snapshot.bytes)
         XCTAssertTrue(c.state?.threadHeads.isEmpty == true)

@@ -4,6 +4,19 @@ import WebKit
 @testable import MarkdownReader
 
 final class ContextualReviewRendererTests: XCTestCase {
+    @MainActor func testTaskChoicesAreBinaryAndSharedPassagesShowPointerOnlyOnHover() async throws {
+        let harness = CollaborationRendererTests(); let (view, _) = try await harness.web()
+        defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
+        _ = try await view.evaluateJavaScript("Folio.render('Original.\\n\\n- [ ] Check','','current',[],true,null,false); Folio.updateSharedReview('current',[\(harness.record)]); Folio.setReviewContext('current',{enabled:true,mode:'shared',threads:[],tasks:[]}); document.querySelector('.review-task-accessory').click(); void 0")
+        let choices = try await view.evaluateJavaScript("Array.from(document.querySelectorAll('[data-review-state]'),b=>b.dataset.reviewState)") as? [String]
+        XCTAssertEqual(choices, ["open", "done"])
+        _ = try await view.evaluateJavaScript("document.querySelector('#review-popover header button').click(); window.node=document.querySelector('#document p').firstChild; window.range=document.createRange(); range.selectNodeContents(node); window.rect=range.getBoundingClientRect(); node.parentElement.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,clientX:rect.left+2,clientY:rect.top+2})); void 0")
+        let hovered = try await view.evaluateJavaScript("document.documentElement.classList.contains('folio-review-hover')") as? Bool
+        XCTAssertEqual(hovered, true)
+        _ = try await view.evaluateJavaScript("document.getElementById('document').dispatchEvent(new PointerEvent('pointerleave')); void 0")
+        let left = try await view.evaluateJavaScript("document.documentElement.classList.contains('folio-review-hover')") as? Bool
+        XCTAssertEqual(left, false)
+    }
     @MainActor func testContextualThreadPreservesSourceAndGuardsSubmission() async throws {
         let harness = CollaborationRendererTests()
         let (view, bridge) = try await harness.web()
@@ -30,9 +43,9 @@ final class ContextualReviewRendererTests: XCTestCase {
         _ = try await view.evaluateJavaScript("Folio.render('Original.\\n\\n- [ ] Check','','current',[{id:'private',start:0,quote:'Original',prefix:'',suffix:'.\\n',comment:'Existing'}],true,null,false); window.before=document.getElementById('document').innerHTML; void 0")
         let available = try await view.evaluateJavaScript("typeof Folio.openPrivateComment==='function'") as? Bool
         XCTAssertEqual(available, true); guard available == true else { return }
-        _ = try await view.evaluateJavaScript("Folio.setReviewContext('current',{enabled:true,mode:'shared',threads:[],tasks:[]}); document.querySelector('.review-task-accessory').click(); document.querySelector('[data-review-state=inProgress]').click(); void 0")
+        _ = try await view.evaluateJavaScript("Folio.setReviewContext('current',{enabled:true,mode:'shared',threads:[],tasks:[]}); document.querySelector('.review-task-accessory').click(); document.querySelector('[data-review-state=done]').click(); void 0")
         let task = try XCTUnwrap(bridge.messages.last { $0["type"] as? String == "reviewTaskAtOffset" })
-        XCTAssertEqual(task["before"] as? String, "Original.\n\n- [ ] Check"); XCTAssertEqual(task["state"] as? String, "inProgress")
+        XCTAssertEqual(task["before"] as? String, "Original.\n\n- [ ] Check"); XCTAssertEqual(task["state"] as? String, "done")
         _ = try await view.evaluateJavaScript("Folio.openPrivateComment('current','private'); window.field=document.querySelector('#review-popover textarea'); field.value='Changed'; field.dispatchEvent(new Event('input')); field.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); Folio.privateCommentResult('current','private','Try again'); void 0")
         let saved = try XCTUnwrap(bridge.messages.last { $0["type"] as? String == "privateCommentSubmit" })
         XCTAssertEqual(saved["id"] as? String, "private"); XCTAssertEqual(saved["text"] as? String, "Changed")
@@ -56,7 +69,7 @@ final class ContextualReviewRendererTests: XCTestCase {
         _ = try await view.evaluateJavaScript("Folio.render('- [ ] Check','','current',[],true,null,false); Folio.setReviewContext('current',{enabled:true,mode:'private',threads:[],tasks:[]}); void 0")
         let count = try await view.evaluateJavaScript("document.querySelectorAll('.review-task-accessory').length") as? Int
         XCTAssertEqual(count, 1); guard count == 1 else { return }
-        _ = try await view.evaluateJavaScript("document.querySelector('.review-task-accessory').click(); document.querySelector('[data-review-state=inProgress]').click(); void 0")
+        _ = try await view.evaluateJavaScript("document.querySelector('.review-task-accessory').click(); document.querySelector('[data-review-state=done]').click(); void 0")
         XCTAssertEqual(bridge.messages.filter { ["reviewModeChanged","reviewTaskAtOffset"].contains($0["type"] as? String ?? "") }.compactMap { $0["type"] as? String }, ["reviewModeChanged","reviewTaskAtOffset"])
     }
 

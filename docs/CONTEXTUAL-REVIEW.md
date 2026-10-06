@@ -1,13 +1,13 @@
 # Contextual review in Folio Staging
 
-2026-10-06 · Staging 0.14.0 (2026100606)
+2026-10-06 · Staging 0.14.0 (2026100608)
 
 ## Interaction
 
 - Select a passage to choose Private or Shared beside the selection, then highlight or comment.
 - Click a shared mark to open its discussion beside the passage. Reply, resolve and reopen there.
 - Private comments use the same contextual input. Enter submits; Shift+Enter adds a line.
-- Shared task status controls sit beside each checkbox. Open, In progress and Done are review states; applying a status to Markdown retains the existing source-save safeguards.
+- Shared task status controls sit beside each checkbox. Open and Done are the only checkbox review states; applying a status to Markdown retains the existing source-save safeguards.
 - The sidebar contains compact Open/Done/Activity lists, passage jumps, recovery actions and shared-folder settings.
 - Panels use the current Folio theme tokens, flat controls and a single focus border. Review controls remain outside document content, so they do not change source text or highlight anchor offsets.
 
@@ -30,3 +30,5 @@ Automated verification:
 - Earlier complete runs had intermittent WebKit startup failures before behavior assertions. A focused predecessor sequence (51 tests) and the subsequent full run passed without changing timeouts or assertions. The startup failure cause remains unproven.
 
 This is a local Staging build. The public application and GitHub release were not replaced. The contextual UI checks here do not constitute a fresh second-Mac OneDrive acceptance run.
+
+Checkbox follow-up: legacy In progress events display as Open without rewriting history. New task events are binary. Shared highlight hit areas now show a pointer cursor, matching private highlights and overlay controls. Verified 19 focused native tests, 58 JavaScript tests, and the Open/Done popup in the installed app.

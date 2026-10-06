@@ -50,7 +50,11 @@ public struct SharedTaskAnchor: Codable, Equatable {
       CollaborationIO.validHash(rawSourceRevision), CollaborationIO.validHash(decodedSourceRevision) else { throw CollaborationError.invalid("task anchor bounds") }
   }
 }
-public enum SharedTaskState: String, Codable { case open, inProgress, done }
+public enum SharedTaskState: String, Codable {
+  // Retained for decoding immutable events written by earlier Staging builds.
+  case open, inProgress, done
+  public var checkboxState: SharedTaskState { self == .done ? .done : .open }
+}
 public enum CollaborationPayload: Codable, Equatable {
   case highlightAdded(highlightID: UUID, anchor: SharedAnchor)
   case highlightRemoved(highlightID: UUID, supersedes: [UUID])

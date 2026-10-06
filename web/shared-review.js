@@ -31,7 +31,8 @@ export function createSharedReview(root,token,send){
   let node,start=0;while((node=walker.nextNode())){values.push({node,start,end:start+node.length});start+=node.length;}
   return values;
  };
- const clear=()=>{for(const name of names)win.CSS?.highlights?.delete(name);names=[];ranges.clear();};
+ const clearHover=()=>doc.documentElement.classList.remove('folio-review-hover');
+ const clear=()=>{clearHover();for(const name of names)win.CSS?.highlights?.delete(name);names=[];ranges.clear();};
  const deferred=()=>composing||changing||root.inert||!!doc.getElementById('complex-editor')||!!doc.querySelector('#format-bar input');
  function refresh(){
   clear();const nodes=entries(),text=nodes.map(e=>e.node.data).join('');
@@ -62,6 +63,10 @@ export function createSharedReview(root,token,send){
  // Live Ranges track edits. Clear before input so a changed quote never paints as saved.
  const beforeInput=()=>{changing=true;clear();schedule();};
  const input=()=>{changing=false;schedule();};
+ const hover=event=>{
+  const hit=!deferred()&&[...ranges.values()].some(range=>[...range.getClientRects()].some(r=>event.clientX>=r.left&&event.clientX<=r.right&&event.clientY>=r.top&&event.clientY<=r.bottom));
+  doc.documentElement.classList.toggle('folio-review-hover',hit);
+ };
  const click=event=>{
   if(deferred()||!win.getSelection()?.isCollapsed)return;
   const hits=[];
@@ -69,6 +74,7 @@ export function createSharedReview(root,token,send){
   if(hits.length){hits.sort();send({type:'sharedHighlightClicked',token,id:hits[0],ids:hits});}
  };
  root.addEventListener('compositionstart',compositionStart);root.addEventListener('compositionend',compositionEnd);
+ root.addEventListener('pointermove',hover);root.addEventListener('pointerleave',clearHover);win.addEventListener('scroll',clearHover,true);win.addEventListener('blur',clearHover);
  root.addEventListener('beforeinput',beforeInput);root.addEventListener('input',input);root.addEventListener('click',click);
  const observer=new win.MutationObserver(()=>{clear();schedule();});observer.observe(root,{subtree:true,childList:true,characterData:true,attributes:true});
  // Inline link editing lives outside the document; Escape removes its input only.
@@ -118,6 +124,7 @@ export function createSharedReview(root,token,send){
   },
   cleanup(){cancelled=true;clearTimeout(timer);observer.disconnect();clear();style.remove();
    root.removeEventListener('compositionstart',compositionStart);root.removeEventListener('compositionend',compositionEnd);
+   root.removeEventListener('pointermove',hover);root.removeEventListener('pointerleave',clearHover);win.removeEventListener('scroll',clearHover,true);win.removeEventListener('blur',clearHover);
    root.removeEventListener('beforeinput',beforeInput);root.removeEventListener('input',input);root.removeEventListener('click',click);
   }
  };

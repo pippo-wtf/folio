@@ -97,11 +97,11 @@ extension CollaborationCoordinator {
     func setSharedTask(document: SharedDocumentRef, taskID: UUID, state value: SharedTaskState) async -> UUID? {
         guard let origin = state?.tasks[taskID], origin.documentID == document.documentID, let bytes = sourceObservations[document.documentID] else { return nil }
         let heads = state?.taskHeads[taskID] ?? [], raw = CollaborationSnapshotID.hash(bytes)
-        return await authorReview(document: document, payload: .taskState(taskID: taskID, state: value, supersedes: heads, rawSourceRevision: raw), parents: heads + [origin.id])?.id
+        return await authorReview(document: document, payload: .taskState(taskID: taskID, state: value.checkboxState, supersedes: heads, rawSourceRevision: raw), parents: heads + [origin.id])?.id
     }
     func sharedTaskStates(taskID: UUID) -> [SharedTaskState] {
         let heads = Set(state?.taskHeads[taskID] ?? [])
-        return events.filter { heads.contains($0.id) }.compactMap { if case .taskState(_, let value, _, _) = $0.payload { return value }; return nil }
+        return events.filter { heads.contains($0.id) }.compactMap { if case .taskState(_, let value, _, _) = $0.payload { return value.checkboxState }; return nil }
     }
     func sharedTaskSourceStatus(taskID: UUID, source: String) -> String {
         guard let origin = state?.tasks[taskID], case .taskRegistered(_, let anchor) = origin.payload, let offset = SharedTaskMatcher.locate(anchor, in: source) else { return "Task location changed · Source update blocked" }

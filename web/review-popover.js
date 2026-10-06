@@ -16,7 +16,7 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
  const button=(label,action)=>{const b=element('button',label);b.type='button';b.addEventListener('click',action);return b;};
  const close=()=>{panel.hidden=true;active=null;composing=false;};
  const taskBox=offset=>[...root.querySelectorAll('input[data-task-offset]')].find(box=>Number(box.dataset.taskOffset)===offset);
- const labelFor=state=>({open:'Open',inProgress:'In progress',done:'Done'})[state]||state;
+ const labelFor=state=>state==='done'?'Done':'Open';
  const writable=()=>context.enabled&&!context.busy&&!root.inert;
  function position(){
   for(const b of layer.children){const box=taskBox(Number(b.dataset.offset));if(!box){b.hidden=true;continue;}const r=box.getBoundingClientRect(),line=box.closest('li').getBoundingClientRect();b.hidden=r.bottom<0||r.top>win.innerHeight;b.style.left=Math.max(8,Math.min(line.right+8,win.innerWidth-b.offsetWidth-8))+'px';b.style.top=Math.max(8,r.top-3)+'px';}
@@ -63,7 +63,7 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
   box.scrollIntoView({block:'nearest',behavior:'instant'});
   active={kind:'task',id,rect:()=>box.isConnected?box.getBoundingClientRect():null};panel.replaceChildren();header('Shared task');
   const task=context.tasks.find(t=>t.id===id);panel.append(element('p',task?.line||box.closest('li').textContent.trim()));
-  for(const state of ['open','inProgress','done']){const choice=button(labelFor(state),()=>{if(!writable())return;if(context.mode!=='shared')send({type:'reviewModeChanged',token,mode:'shared'});send(id?{type:'reviewTaskState',token,id,state}:{type:'reviewTaskAtOffset',token,before,offset,state});close();});choice.dataset.reviewState=state;choice.setAttribute('aria-pressed',String(task?.states?.length===1&&task.states[0]===state));panel.append(choice);}
+  for(const state of ['open','done']){const choice=button(labelFor(state),()=>{if(!writable())return;if(context.mode!=='shared')send({type:'reviewModeChanged',token,mode:'shared'});send(id?{type:'reviewTaskState',token,id,state}:{type:'reviewTaskAtOffset',token,before,offset,state});close();});choice.dataset.reviewState=state;choice.setAttribute('aria-pressed',String(task?.states?.length===1&&task.states[0]===state));panel.append(choice);}
   if(task?.states?.length>1)panel.append(element('p','Conflicting updates: choose the current status.'));
   if(task?.status)panel.append(element('p',task.status,'review-task-source-status'));
   if(id&&task?.states?.length===1){const apply=button('Apply status to Markdown',()=>{if(!writable())return;if(context.mode!=='shared')send({type:'reviewModeChanged',token,mode:'shared'});send({type:'reviewTaskApply',token,id});close();});apply.dataset.reviewApply='';apply.disabled=!writable();panel.append(apply);}

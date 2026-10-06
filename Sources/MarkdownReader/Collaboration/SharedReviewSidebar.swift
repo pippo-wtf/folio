@@ -101,7 +101,7 @@ struct SharedReviewSidebar: View {
             Text(event.displayTime.formatted(date: .abbreviated, time: .shortened)).font(.system(size: 10)).foregroundStyle(.secondary)
         }.accessibilityLabel("\(event.authorName), claimed identity \(event.participantID.uuidString), \(event.displayTime.formatted())")
     }
-    private func taskLabel(_ state: SharedTaskState) -> String { state == .inProgress ? "In progress" : state.rawValue.capitalized }
+    private func taskLabel(_ state: SharedTaskState) -> String { state.checkboxState.rawValue.capitalized }
     private func taskID(_ event: CollaborationEvent) -> UUID? {
         switch event.payload {
         case .taskRegistered(let id, _), .taskState(let id, _, _, _): return id
