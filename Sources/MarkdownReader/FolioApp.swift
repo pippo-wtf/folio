@@ -30,6 +30,10 @@ struct FolioApp: App {
                     Button("Clear Recent Files") { model.clearHistory() }
                 }
                 Button("Welcome to Folio") { model.showWelcome() }
+                if BuildChannel.collaborationAvailable {
+                    Divider()
+                    Button("Add shared folder…") { model.collaboration.showFolderSheet = true }
+                }
             }
             CommandGroup(replacing: .undoRedo) {
                 Button("Undo") { model.undoEdit() }.keyboardShortcut("z")

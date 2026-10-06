@@ -6,6 +6,7 @@ import ReaderCore
 
 struct Heading: Identifiable, Decodable { let id: String; let title: String; let level: Int }
 @MainActor final class ReaderModel: ObservableObject {
+    let collaboration: CollaborationCoordinator
     static let shared: ReaderModel = { BuildChannel.prepareDefaults(); return ReaderModel() }()
     @Published var layout = ReaderModel.savedLayout() {
         didSet {
@@ -25,11 +26,17 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     @Published var selectedPresetID: UUID?
     private var presetsReadable = true
     private let pasteboardWriter: (String) -> Bool
-    init(pasteboardWriter: @escaping (String) -> Bool = { source in
+    init(collaboration: CollaborationCoordinator? = nil, pasteboardWriter: @escaping (String) -> Bool = { source in
         NSPasteboard.general.clearContents()
         return NSPasteboard.general.setString(source, forType: .string)
     }) {
+        self.collaboration = collaboration ?? CollaborationCoordinator()
         self.pasteboardWriter = pasteboardWriter
+        self.collaboration.onSourceObserved = { [weak self] document, bytes in
+            guard let self, self.collaboration.currentDocument?.documentID == document.documentID,
+                  let baseline = self.snapshot?.bytes, baseline != bytes else { return }
+            self.error = "The shared source changed. Author unknown. Your current text is retained; guarded source review is not yet available."
+        }
         if let data = UserDefaults.standard.data(forKey: "readingPresetsV1") {
             if let values = try? JSONDecoder().decode([ReadingPreset].self, from: data), ReadingPreset.validLibrary(values) {
                 presets = values
@@ -267,7 +274,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                 generation += 1; monitor?.invalidate(); loading = false
                 if fileScope { fileURL?.stopAccessingSecurityScopedResource() }; fileScope = false
                 if folderScope { grantedFolder?.stopAccessingSecurityScopedResource() }; folderScope = false
-                fileURL = nil; grantedFolder = nil; imagesAllowed = false; snapshot = nil
+                fileURL = nil; collaboration.selectDocument(url: nil); grantedFolder = nil; imagesAllowed = false; snapshot = nil
                 assetHandler.document = nil; assetHandler.root = nil
                 documentID = UUID(); marked = []; headings = []
                 isWelcome = false; untitledKey = "folio:draft:" + UUID().uuidString
@@ -342,6 +349,14 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     }
     @discardableResult func save(asCopy: Bool = false) -> Bool {
         guard !loading else { return false }
+        if let fileURL, collaboration.protectsSource(at: fileURL) {
+            error = "Shared source saving is disabled until guarded source recovery is ready. Your draft is retained."
+            return false
+        }
+        if collaboration.destinationChangingSaveBlocked && (asCopy || fileURL == nil || snapshot == nil) {
+            error = "Saving to a new destination is disabled while shared source protection is being integrated. Your draft is retained."
+            return false
+        }
         if journalKey == nil { beginJournalTracking(text) }
         _ = flushEditJournal()
         let previousHighlightKey = highlightKey
@@ -355,6 +370,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                 panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
                 panel.nameFieldStringValue = fileURL?.lastPathComponent ?? "Untitled.md"
                 guard panel.runModal() == .OK, let url = panel.url else { return false }
+                guard !collaboration.protectsSource(at: url) else {
+                    error = "This destination is a registered shared source. Choose a separate private destination."
+                    return false
+                }
                 // Saving to the original path must still perform the conflict check.
                 if url.standardizedFileURL == fileURL?.standardizedFileURL, let snapshot {
                     try snapshot.save(text, to: url)
@@ -364,7 +383,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                     try data.write(to: url, options: .atomic)
                 }
                 if fileScope { fileURL?.stopAccessingSecurityScopedResource() }
-                fileURL = url; fileScope = url.startAccessingSecurityScopedResource()
+                fileURL = url; collaboration.selectDocument(url: url); fileScope = url.startAccessingSecurityScopedResource()
                 assetHandler.document = url
             }
             guard let url = fileURL else { return false }
@@ -595,15 +614,18 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         if fileScope { fileURL?.stopAccessingSecurityScopedResource() }
         if folderScope { grantedFolder?.stopAccessingSecurityScopedResource() }
         grantedFolder = nil; imagesAllowed = false; folderScope = false
-        fileURL = url; fileScope = url.startAccessingSecurityScopedResource()
+        fileURL = url; collaboration.selectDocument(url: url); fileScope = url.startAccessingSecurityScopedResource()
         assetHandler.document = url; assetHandler.root = nil; assetHandler.token = UUID().uuidString.lowercased()
         title = url.deletingPathExtension().lastPathComponent
         subtitle = url.lastPathComponent + " · Markdown"
         text = ""; headings = []; error = nil; loading = true
         Task {
             do {
-                let content = try await Task.detached { try DocumentSnapshot(url: url) }.value
+                let content: DocumentSnapshot
+                if collaboration.enabled { content = try await collaboration.readSource(at: url) }
+                else { content = try await Task.detached { try DocumentSnapshot(url: url) }.value }
                 guard generation == current else { return }
+                collaboration.selectDocument(url: url)
                 snapshot = content; text = content.text; baseline = text; loading = false
                 beginJournalTracking(content.text)
                 pendingPosition = readingPositions[highlightKey] ?? ReadingPosition(heading: "", offset: 0, fraction: 0)
@@ -625,7 +647,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         generation += 1; highlightToken = ""; highlightsReadable = false; marked = []; monitor?.invalidate()
         if fileScope { fileURL?.stopAccessingSecurityScopedResource() }; fileScope = false
         if folderScope { grantedFolder?.stopAccessingSecurityScopedResource() }; folderScope = false
-        fileURL = nil; grantedFolder = nil; imagesAllowed = false
+        fileURL = nil; collaboration.selectDocument(url: nil); grantedFolder = nil; imagesAllowed = false
         assetHandler.document = nil; assetHandler.root = nil
         title = "Folio"; subtitle = "A quiet place for your words"; error = nil; loading = false
         text = (try? String(contentsOf: Bundle.module.url(forResource: "Welcome", withExtension: "md", subdirectory: "Resources")!, encoding: .utf8)) ?? "# Welcome to Folio\n\nOpen a Markdown file to start reading."
@@ -651,9 +673,13 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         revision = values?.contentModificationDate; revisionSize = values?.fileSize
     }
     func startMonitor() {
+        monitor?.invalidate()
+        guard collaboration.sourceAccessUnverified || (fileURL.map({ !collaboration.protectsSource(at: $0) }) ?? true) else { return }
         monitor = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, let url = self.fileURL, !self.loading else { return }
+                guard !self.collaboration.sourceAccessUnverified else { return }
+                guard !self.collaboration.protectsSource(at: url) else { self.monitor?.invalidate(); return }
                 let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
                 if values?.contentModificationDate != self.revision || values?.fileSize != self.revisionSize { self.reload() }
             }
@@ -661,6 +687,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     }
     func reload() {
         guard let url = fileURL, !loading else { return }
+        guard !collaboration.protectsSource(at: url) else {
+            error = "Shared source refresh requires guarded recovery. Your current text is retained."
+            return
+        }
         let current = generation; loading = true
         Task {
             do {

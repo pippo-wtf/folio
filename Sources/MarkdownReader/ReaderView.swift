@@ -5,6 +5,11 @@ import UniformTypeIdentifiers
 struct ReaderView: View {
     @ObservedObject var model: ReaderModel
     @ObservedObject var updater: FolioUpdater
+    @ObservedObject private var collaboration: CollaborationCoordinator
+
+    init(model: ReaderModel, updater: FolioUpdater) {
+        self.model = model; self.updater = updater; self.collaboration = model.collaboration
+    }
     @Environment(\.openWindow) private var openWindow
     @Environment(\.colorScheme) private var systemScheme
 
@@ -69,6 +74,13 @@ struct ReaderView: View {
                 .preferredColorScheme(isDark ? .dark : .light)
                 .presentationBackground(paperColor)
         }
+        .sheet(isPresented: $collaboration.showFolderSheet) {
+            if BuildChannel.collaborationAvailable {
+                SharedFolderSheet(coordinator: collaboration, model: model, paper: paperColor, ink: inkColor, accent: accentColor)
+                    .preferredColorScheme(isDark ? .dark : .light).presentationBackground(paperColor)
+            }
+        }
+        .task { await collaboration.restore() }
         .onAppear {
             let action = openWindow
             DispatchQueue.main.async { ReaderWindowPresenter.shared.install { action(id: "reader") } }
@@ -86,6 +98,20 @@ struct ReaderView: View {
 
     private var outlineSidebar: some View {
         List(selection: $sidebarSelection) {
+            if BuildChannel.collaborationAvailable {
+                Section("Shared folder") {
+                    Button(collaboration.workspaceID == nil ? "Add shared folder…" : "Manage shared folder…") { collaboration.showFolderSheet = true }
+                    if collaboration.workspaceID != nil {
+                        Text(collaboration.statusMessage).font(.caption).foregroundStyle(accentColor)
+                        ForEach(collaboration.documents) { doc in
+                            Button(doc.reference.relativePath) {
+                                Task { let generation = model.documentID; if let url = await collaboration.openDocument(id: doc.id), model.documentID == generation { model.load(url) } }
+                            }.disabled(doc.url == nil || collaboration.busy)
+                        }
+                        if let error = collaboration.error { Text(error).font(.caption).foregroundStyle(.secondary) }
+                    }
+                }
+            }
             Section("Contents") {
                 if model.headings.isEmpty {
                     Text("No headings in this document")
