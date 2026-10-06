@@ -6,6 +6,16 @@ import ReaderCore
 
 struct Heading: Identifiable, Decodable { let id: String; let title: String; let level: Int }
 @MainActor final class ReaderModel: ObservableObject {
+    let collaboration: CollaborationCoordinator
+    let sharedReview = SharedReviewController()
+    var reviewRenderToken: String { highlightToken }
+    @Published private(set) var sharedSaveBusy = false
+    private var saveCompletion: ((Bool) -> Void)?
+    private var contentSnapshotCompletion: ((String?) -> Void)?
+    private var saveGeneration = UUID()
+    private(set) var leaveSavePending = false
+    private let leavePrompt: @MainActor (String) -> NSApplication.ModalResponse
+    private let saveDestination: @MainActor (String) -> URL?
     static let shared: ReaderModel = { BuildChannel.prepareDefaults(); return ReaderModel() }()
     @Published var layout = ReaderModel.savedLayout() {
         didSet {
@@ -24,7 +34,37 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     @Published var presets: [ReadingPreset] = []
     @Published var selectedPresetID: UUID?
     private var presetsReadable = true
-    init() {
+    private let pasteboardWriter: (String) -> Bool
+    init(collaboration: CollaborationCoordinator? = nil, leavePrompt: @escaping @MainActor (String) -> NSApplication.ModalResponse = { title in
+        let alert = NSAlert(); alert.messageText = "Save changes to ‘\(title)’?"
+        alert.informativeText = "Your changes have not been saved to the Markdown file."
+        alert.addButton(withTitle: "Save"); alert.addButton(withTitle: "Discard Changes"); alert.addButton(withTitle: "Cancel")
+        return alert.runModal()
+    }, saveDestination: (@MainActor (String) -> URL?)? = nil, pasteboardWriter: @escaping (String) -> Bool = { source in
+        NSPasteboard.general.clearContents()
+        return NSPasteboard.general.setString(source, forType: .string)
+    }) {
+        self.collaboration = collaboration ?? CollaborationCoordinator()
+        self.pasteboardWriter = pasteboardWriter
+        self.leavePrompt = leavePrompt
+        self.saveDestination = saveDestination ?? { name in
+            let panel = NSSavePanel(); panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
+            panel.nameFieldStringValue = name; panel.message = "Choose a new absent destination. Existing files are kept."
+            return panel.runModal() == .OK ? panel.url : nil
+        }
+        self.collaboration.onSourceObserved = { [weak self] document, bytes in
+            guard let self, self.collaboration.currentDocument?.documentID == document.documentID,
+                  let base = self.snapshot, base.bytes != bytes else { return }
+            let id = self.documentID, draft = self.text
+            self.error = "The shared source changed. Author unknown. Your current text is retained. Compare versions or keep a separate copy."
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do { try await self.collaboration.retainSource(document: document, baseline: base.bytes, draft: base.encoded(draft), observed: bytes) }
+                catch { self.error = "Source recovery evidence could not be retained. Your text is here; export a separate copy before retrying."; self.collaboration.sourceSavingEnabled = false; return }
+                guard self.documentID == id else { return }
+                // Incoming source bytes are retained without changing a dirty/active editor.
+            }
+        }
         if let data = UserDefaults.standard.data(forKey: "readingPresetsV1") {
             if let values = try? JSONDecoder().decode([ReadingPreset].self, from: data), ReadingPreset.validLibrary(values) {
                 presets = values
@@ -262,7 +302,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                 generation += 1; monitor?.invalidate(); loading = false
                 if fileScope { fileURL?.stopAccessingSecurityScopedResource() }; fileScope = false
                 if folderScope { grantedFolder?.stopAccessingSecurityScopedResource() }; folderScope = false
-                fileURL = nil; grantedFolder = nil; imagesAllowed = false; snapshot = nil
+                fileURL = nil; collaboration.selectDocument(url: nil); grantedFolder = nil; imagesAllowed = false; snapshot = nil
                 assetHandler.document = nil; assetHandler.root = nil
                 documentID = UUID(); marked = []; headings = []
                 isWelcome = false; untitledKey = "folio:draft:" + UUID().uuidString
@@ -288,6 +328,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     @Published var editingEnabled = false {
         didSet {
             guard oldValue != editingEnabled else { return }
+            cancelCopyContent()
             _ = flushEditJournal()
             if !editingEnabled && writing { writing = false }
             else { render() }
@@ -296,6 +337,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     @Published var writing = false {
         didSet {
             guard oldValue != writing else { return }
+            cancelCopyContent()
             pageEditTime = .distantPast
             if writing { editingEnabled = true; flushEditJournal(); sourceEntry = text }
             else {
@@ -306,27 +348,188 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         }
     }
     @Published var baseline = ""
-    @Published var documentID = UUID() { didSet { clearPageHistory() } }
+    @Published var documentID = UUID() { didSet { cancelCopyContent(); clearPageHistory() } }
     var snapshot: DocumentSnapshot?
     var dirty: Bool { text != baseline }
-    weak var editor: NSTextView?
-    func confirmLeave() -> Bool {
-        flushRecovery()
-        _ = flushEditJournal()
+    weak var editor: NSTextView? { didSet { if oldValue !== editor { cancelCopyContent() } } }
+    func confirmLeave(continuation: (() -> Void)? = nil, cancellation: (() -> Void)? = nil) -> Bool {
+        guard !sharedSaveBusy else { return false }
+        // Synchronize native text before deciding whether there is anything to leave.
+        if writing, let editor {
+            guard !editor.hasMarkedText() else { error = "Finish your current text composition before leaving."; return false }
+            sourceEditorDidChange(editor.string)
+        }
+        if collaboration.enabled && !loading && (writing || editingEnabled) {
+            guard contentRequest == nil else { error = "Wait for the current editor snapshot before leaving."; return false }
+            let id = documentID
+            var synchronous = true, immediate: Bool?
+            leaveSavePending = true
+            requestContentSnapshot { [weak self] source in
+                guard let self else { cancellation?(); return }
+                guard source != nil, self.documentID == id else {
+                    self.leaveSavePending = false
+                    if synchronous { immediate = false } else { cancellation?() }
+                    return
+                }
+                let allowed = self.confirmLeaveAcknowledged(continuation: continuation, cancellation: cancellation)
+                if allowed {
+                    self.leaveSavePending = false
+                    if synchronous { immediate = true } else { continuation?() }
+                } else if !self.sharedSaveBusy {
+                    self.leaveSavePending = false
+                    if synchronous { immediate = false } else { cancellation?() }
+                }
+            }
+            synchronous = false
+            return immediate ?? false
+        }
+        return confirmLeaveAcknowledged(continuation: continuation, cancellation: cancellation)
+    }
+    private func confirmLeaveAcknowledged(continuation: (() -> Void)?, cancellation: (() -> Void)?) -> Bool {
+        flushRecovery(); _ = flushEditJournal()
         guard dirty else { return true }
-        let alert = NSAlert(); alert.messageText = "Save changes to ‘\(title)’?"
-        alert.informativeText = "Your changes have not been saved to the Markdown file."
-        alert.addButton(withTitle: "Save"); alert.addButton(withTitle: "Discard Changes"); alert.addButton(withTitle: "Cancel")
-        switch alert.runModal() {
-        case .alertFirstButtonReturn: return save()
+        switch leavePrompt(title) {
+        case .alertFirstButtonReturn:
+            if collaboration.enabled && (fileURL == nil || snapshot == nil || fileURL.map { collaboration.protectsSource(at: $0) } == true) {
+                guard let continuation else { error = "Shared saving is asynchronous. Use Save and wait before leaving."; return false }
+                let id = documentID
+                leaveSavePending = true
+                requestSharedSave { [weak self] success in
+                    guard let self else { cancellation?(); return }
+                    self.leaveSavePending = false
+                    if success && self.documentID == id && !self.dirty { continuation() }
+                    else { cancellation?() }
+                }
+                return false
+            }
+            return save()
         case .alertSecondButtonReturn: baseline = text; flushRecovery(); return true
         default: return false
         }
     }
+    func saveCommand(asCopy: Bool = false) {
+        if collaboration.enabled && (asCopy || fileURL == nil || snapshot == nil || fileURL.map { collaboration.protectsSource(at: $0) } == true || collaboration.destinationChangingSaveBlocked) {
+            requestSharedSave(asCopy: asCopy) { _ in }
+        } else { _ = save(asCopy: asCopy) }
+    }
+    private func finishSharedSave(_ success: Bool) {
+        guard let completion = saveCompletion else { return }
+        saveCompletion = nil; sharedSaveBusy = false; completion(success)
+    }
+    func requestSharedSave(asCopy: Bool = false, destination: URL? = nil, registerNew: Bool = false, triggerEventID: UUID? = nil, completion: @escaping (Bool) -> Void) {
+        guard !sharedSaveBusy, !loading, !preparingPrint, contentRequest == nil else { completion(false); return }
+        guard collaboration.enabled else { completion(save(asCopy: asCopy)); return }
+        guard !collaboration.sourceAccessUnverified else { error = "The shared source access check is incomplete. Retry or reconnect before saving."; completion(false); return }
+        let asCopy = asCopy || fileURL == nil || snapshot == nil
+        let protected = fileURL.map { collaboration.protectsSource(at: $0) } ?? false
+        guard asCopy || protected else { completion(save()); return }
+        if !asCopy && (!collaboration.sourceSavingEnabled || collaboration.currentDocument == nil || snapshot == nil) {
+            error = "Shared source saving is disabled or needs reconnection. Enable the disposable Staging pilot, or keep a separate copy."
+            completion(false); return
+        }
+        let id = documentID, originalURL = fileURL, originalSnapshot = snapshot, document = collaboration.currentDocument
+        let token = UUID(); saveGeneration = token; saveCompletion = completion; sharedSaveBusy = true
+        requestContentSnapshot { [weak self] source in
+            guard let self else { completion(false); return }
+            guard let source, self.documentID == id, self.saveGeneration == token else { self.finishSharedSave(false); return }
+            var destination = destination, register = registerNew
+            if asCopy && destination == nil {
+                guard let selected = self.saveDestination(self.fileURL?.lastPathComponent ?? "Untitled.md") else { self.finishSharedSave(false); return }
+                destination = selected
+                if let folder = self.collaboration.folderURL, selected.standardizedFileURL.path.hasPrefix(folder.standardizedFileURL.path + "/"), selected.standardizedFileURL != originalURL?.standardizedFileURL {
+                    let alert = NSAlert(); alert.messageText = "Register this as a new shared document?"; alert.informativeText = "This creates a new identity. Existing shared history is kept with its original document."; alert.addButton(withTitle: "Register and Save"); alert.addButton(withTitle: "Cancel")
+                    guard alert.runModal() == .alertFirstButtonReturn else { self.finishSharedSave(false); return }; register = true
+                }
+            }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    let saved: DocumentSnapshot, target: URL
+                    if !asCopy || destination?.standardizedFileURL == originalURL?.standardizedFileURL {
+                        guard let document, let baseline = originalSnapshot, let url = originalURL else { throw CollaborationError.unavailable }
+                        let outcome = try await self.collaboration.save(document: document, baseline: baseline, draft: source, triggerEventID: triggerEventID)
+                        guard outcome.localApply == .applied || outcome.localApply == .unchanged else {
+                            self.error = "The file could not be safely changed. Your draft is retained. Compare or export recovery copies."
+                            await self.collaboration.compareSource(document: document); self.finishSharedSave(false); return
+                        }
+                        saved = try await self.collaboration.readSource(at: url); target = url
+                    } else {
+                        guard let url = destination, !self.collaboration.protectsSource(at: url) else { throw CollaborationError.invalid("This destination is already a registered shared source. Choose a new destination.") }
+                        let bytes = try originalSnapshot?.encoded(source) ?? Data(source.utf8)
+                        saved = try await self.collaboration.savePrivateCopy(bytes: bytes, to: url, register: register); target = url
+                    }
+                    guard self.documentID == id, self.saveGeneration == token, self.fileURL == originalURL else { self.finishSharedSave(false); return }
+                    if saved.text == source && target == originalURL { self.snapshot = saved; self.baseline = source }
+                    self.requestContentSnapshot { [weak self] current in
+                        guard let self, self.documentID == id, self.saveGeneration == token, self.fileURL == originalURL else { self?.finishSharedSave(false); return }
+                        guard current != nil else { self.finishSharedSave(false); return }
+                        guard current == source, saved.text == source else { self.error = "The saved version is retained, and your newer draft is still here. Save again before leaving."; self.finishSharedSave(false); return }
+                        if target != originalURL {
+                            if self.fileScope { self.fileURL?.stopAccessingSecurityScopedResource() }
+                            self.fileURL = target; self.fileScope = target.startAccessingSecurityScopedResource(); self.assetHandler.document = target
+                            self.collaboration.selectDocument(url: target)
+                            self.title = target.deletingPathExtension().lastPathComponent
+                        }
+                        self.text = source; self.snapshot = saved; self.baseline = source
+                        self.editor?.breakUndoCoalescing(); self.rememberDocument(target); self.flushRecovery(); self.recordRevision()
+                        self.error = nil
+                        if self.collaboration.lastSourceSave?.publication != .complete && !asCopy { self.error = "Saved on this Mac. Publication is pending; Retry or export recovery copies. OneDrive receipt is unverified." }
+                        self.finishSharedSave(true)
+                    }
+
+                } catch {
+                    guard self.documentID == id, self.saveGeneration == token else { self.finishSharedSave(false); return }
+                    self.error = "The shared save did not complete: \(error.localizedDescription) Your draft is retained. Compare or keep a separate copy."
+                    if let document { await self.collaboration.compareSource(document: document) }
+                    self.finishSharedSave(false)
+                }
+            }
+        }
+    }
+    func compareSharedSource() {
+        guard let document = collaboration.currentDocument, let base = snapshot, !sharedSaveBusy else { return }
+        let id = documentID
+        requestContentSnapshot { [weak self] source in
+            guard let self, let source, self.documentID == id else { return }
+            Task {
+                do { try await self.collaboration.retainSource(document: document, baseline: base.bytes, draft: base.encoded(source), observed: self.collaboration.sourceObservations[document.documentID] ?? base.bytes) }
+                catch { self.collaboration.sourceSavingEnabled = false; self.error = "Source recovery evidence could not be retained. Keep a separate copy before retrying."; return }
+                guard self.documentID == id else { return }
+                await self.collaboration.compareSource(document: document)
+            }
+        }
+    }
+    func reloadSharedSource(journalKind: EditJournalStore.Kind = .externalReload, expectedBytes: Data? = nil) {
+        guard !sharedSaveBusy, let document = collaboration.currentDocument, let base = snapshot, let url = fileURL else { return }
+        let id = documentID
+        requestContentSnapshot { [weak self] source in
+            guard let self, let source, self.documentID == id else { return }
+            guard !self.dirty else { self.error = "Save or keep your draft before loading another version."; return }
+            Task { [self] in
+                do {
+                    let incoming = try await self.collaboration.readSource(at: url)
+                    if let expectedBytes {
+                        guard incoming.bytes == expectedBytes, self.collaboration.isLocallyAppliedSource(document: document, bytes: expectedBytes) else { self.error = "The source changed after local application. Compare versions before loading it."; return }
+                    } else if journalKind != .externalReload { self.error = "Local edit attribution needs a proved source application."; return }
+                    try await self.collaboration.retainSource(document: document, baseline: base.bytes, draft: base.encoded(source), observed: incoming.bytes)
+                    guard self.documentID == id else { return }
+                    self.requestContentSnapshot { [weak self] current in
+                        guard let self, self.documentID == id, current == source, !self.dirty else { return }
+                        self.recordJournalTransition(from: source, to: incoming.text, kind: journalKind)
+                        self.snapshot = incoming; self.text = incoming.text; self.baseline = incoming.text; self.documentID = UUID(); self.render()
+                        if expectedBytes != nil && self.error?.hasPrefix("The shared source changed. Author unknown.") == true { self.error = nil }
+                    }
+                } catch { self.collaboration.sourceSavingEnabled = false; self.error = "The incoming source could not be safely retained. Retry or export a separate copy." }
+            }
+        }
+    }
     func newDocument() {
-        guard confirmLeave() else { return }
+        guard confirmLeave(continuation: { [weak self] in self?.finishNewDocument() }) else { return }
+        finishNewDocument()
+    }
+    private func finishNewDocument() {
         baseline = text
-        showWelcome(trackJournal: false)
+        finishShowWelcome(trackJournal: false)
         isWelcome = false; untitledKey = "folio:draft:" + UUID().uuidString
         marked = []; headings = []
         text = ""; baseline = ""; snapshot = nil; title = "Untitled"; writing = false; editingEnabled = true
@@ -335,6 +538,14 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     }
     @discardableResult func save(asCopy: Bool = false) -> Bool {
         guard !loading else { return false }
+        if let fileURL, collaboration.protectsSource(at: fileURL) {
+            error = "Use the guarded shared Save command. Your draft is retained."
+            return false
+        }
+        if collaboration.enabled && (asCopy || fileURL == nil || snapshot == nil) {
+            error = "Use Save As through the guarded save command to choose a new absent destination. Your draft is retained."
+            return false
+        }
         if journalKey == nil { beginJournalTracking(text) }
         _ = flushEditJournal()
         let previousHighlightKey = highlightKey
@@ -348,6 +559,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                 panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
                 panel.nameFieldStringValue = fileURL?.lastPathComponent ?? "Untitled.md"
                 guard panel.runModal() == .OK, let url = panel.url else { return false }
+                guard !collaboration.protectsSource(at: url) else {
+                    error = "This destination is a registered shared source. Choose a separate private destination."
+                    return false
+                }
                 // Saving to the original path must still perform the conflict check.
                 if url.standardizedFileURL == fileURL?.standardizedFileURL, let snapshot {
                     try snapshot.save(text, to: url)
@@ -357,7 +572,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                     try data.write(to: url, options: .atomic)
                 }
                 if fileScope { fileURL?.stopAccessingSecurityScopedResource() }
-                fileURL = url; fileScope = url.startAccessingSecurityScopedResource()
+                fileURL = url; collaboration.selectDocument(url: url); fileScope = url.startAccessingSecurityScopedResource()
                 assetHandler.document = url
             }
             guard let url = fileURL else { return false }
@@ -414,12 +629,12 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     private var revisionSize: Int?
     private var generation = 0
     weak var webView: WKWebView?
-    var ready = false
+    var ready = false { didSet { if !ready { cancelCopyContent() } } }
     let assetHandler = LocalAssets()
     private var lastErrorCode = "none"
 
     private let highlightStore = HighlightStore(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("\(BuildChannel.storage)/Highlights"))
-    private var highlightToken = ""
+    private var highlightToken = "" { didSet { if oldValue != highlightToken { cancelCopyContent() } } }
     private var highlightsReadable = false
     private var isWelcome = true
     private var untitledKey = "folio:draft:" + UUID().uuidString
@@ -449,14 +664,33 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             script("highlightSaveFailed", [token])
         }
     }
+    func submitPrivateComment(_ id: String, text value: String, token: String) {
+        guard token == highlightToken, highlightsReadable,
+              let mark = marked.first(where: { $0.id == id }) else { return }
+        let draft = HighlightCommentDraft(id: id, quote: mark.quote, text: mark.comment ?? "", documentKey: highlightKey, token: token)
+        let issue = saveComment(value, draft: draft, redraw: false)
+        script("privateCommentResult", [token, id, issue as Any? ?? NSNull()])
+        if issue == nil, let data = try? JSONEncoder().encode(marked), let saved = try? JSONSerialization.jsonObject(with: data) {
+            script("highlightsSaved", [token, saved])
+        }
+    }
     func commentOnHighlight(_ id: String, token requestToken: String? = nil) {
         guard requestToken == nil || requestToken == highlightToken else { return }
         guard let index = marked.firstIndex(where: { $0.id == id }) else { return }
-        commentDraft = HighlightCommentDraft(id: id, quote: marked[index].quote,
+        let draft = HighlightCommentDraft(id: id, quote: marked[index].quote,
             text: marked[index].comment ?? "", documentKey: highlightKey, token: highlightToken)
+        guard ready, !writing, let webView,
+              let data = try? JSONSerialization.data(withJSONObject: [highlightToken, id]),
+              let arguments = String(data: data, encoding: .utf8) else { commentDraft = draft; return }
+        webView.evaluateJavaScript("window.Folio.openPrivateComment.apply(null, \(arguments))") { [weak self] opened, _ in
+            guard let self, self.highlightKey == draft.documentKey, self.highlightToken == draft.token,
+                  self.marked.contains(where: { $0.id == id }) else { return }
+            // Detached recovery is retained only when the passage cannot be located.
+            if opened as? Bool != true { self.commentDraft = draft }
+        }
     }
     /// Returns an error without dismissing the composer or losing its text.
-    func saveComment(_ value: String, draft: HighlightCommentDraft) -> String? {
+    func saveComment(_ value: String, draft: HighlightCommentDraft, redraw: Bool = true) -> String? {
         guard draft.documentKey == highlightKey, draft.token == highlightToken,
               let index = marked.firstIndex(where: { $0.id == draft.id }) else {
             return "This passage has changed. Close this comment and select it again."
@@ -469,7 +703,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             try highlightStore.save(records, for: draft.documentKey, revision: HighlightStore.revision(text), draft: dirty)
             marked = records
             commentDraft = nil
-            render()
+            if redraw { render() }
             return nil
         } catch { return "The comment could not be saved. Please try again." }
     }
@@ -546,7 +780,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             } else if !journalBlocked { error = nil }
         } catch { journalFailure(error) }
     }
-    func highlightSelection() { script("highlightSelection", []) }
+    func highlightSelection() {
+        if sharedReview.mode == .shared && collaboration.currentDocument != nil { shareSelectedText(comment: false) }
+        else { script("highlightSelection", []) }
+    }
 
     func open() {
         let panel = NSOpenPanel()
@@ -577,7 +814,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         // LaunchServices may deliver a file before the window appears. Recovery
         // must be decided before loading that clean file can clear a crash draft.
         guard recoveryStartupReady else { pendingStartupURL = url; return }
-        guard confirmLeave() else { return }
+        guard confirmLeave(continuation: { [weak self] in self?.finishLoad(url) }) else { return }
+        finishLoad(url)
+    }
+    private func finishLoad(_ url: URL) {
         stopJournalTracking()
         isWelcome = false
         baseline = ""; snapshot = nil; writing = false; editingEnabled = false; documentID = UUID()
@@ -588,15 +828,18 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         if fileScope { fileURL?.stopAccessingSecurityScopedResource() }
         if folderScope { grantedFolder?.stopAccessingSecurityScopedResource() }
         grantedFolder = nil; imagesAllowed = false; folderScope = false
-        fileURL = url; fileScope = url.startAccessingSecurityScopedResource()
+        fileURL = url; collaboration.selectDocument(url: url); fileScope = url.startAccessingSecurityScopedResource()
         assetHandler.document = url; assetHandler.root = nil; assetHandler.token = UUID().uuidString.lowercased()
         title = url.deletingPathExtension().lastPathComponent
         subtitle = url.lastPathComponent + " · Markdown"
         text = ""; headings = []; error = nil; loading = true
         Task {
             do {
-                let content = try await Task.detached { try DocumentSnapshot(url: url) }.value
+                let content: DocumentSnapshot
+                if collaboration.enabled { content = try await collaboration.readSource(at: url) }
+                else { content = try await Task.detached { try DocumentSnapshot(url: url) }.value }
                 guard generation == current else { return }
+                collaboration.selectDocument(url: url)
                 snapshot = content; text = content.text; baseline = text; loading = false
                 beginJournalTracking(content.text)
                 pendingPosition = readingPositions[highlightKey] ?? ReadingPosition(heading: "", offset: 0, fraction: 0)
@@ -610,7 +853,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         }
     }
     func showWelcome(trackJournal: Bool = true) {
-        guard confirmLeave() else { return }
+        guard confirmLeave(continuation: { [weak self] in self?.finishShowWelcome(trackJournal: trackJournal) }) else { return }
+        finishShowWelcome(trackJournal: trackJournal)
+    }
+    private func finishShowWelcome(trackJournal: Bool) {
         stopJournalTracking()
         if trackJournal { untitledKey = "folio:draft:" + UUID().uuidString }
         isWelcome = true
@@ -618,7 +864,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         generation += 1; highlightToken = ""; highlightsReadable = false; marked = []; monitor?.invalidate()
         if fileScope { fileURL?.stopAccessingSecurityScopedResource() }; fileScope = false
         if folderScope { grantedFolder?.stopAccessingSecurityScopedResource() }; folderScope = false
-        fileURL = nil; grantedFolder = nil; imagesAllowed = false
+        fileURL = nil; collaboration.selectDocument(url: nil); grantedFolder = nil; imagesAllowed = false
         assetHandler.document = nil; assetHandler.root = nil
         title = "Folio"; subtitle = "A quiet place for your words"; error = nil; loading = false
         text = (try? String(contentsOf: Bundle.module.url(forResource: "Welcome", withExtension: "md", subdirectory: "Resources")!, encoding: .utf8)) ?? "# Welcome to Folio\n\nOpen a Markdown file to start reading."
@@ -644,9 +890,13 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         revision = values?.contentModificationDate; revisionSize = values?.fileSize
     }
     func startMonitor() {
+        monitor?.invalidate()
+        guard collaboration.sourceAccessUnverified || (fileURL.map({ !collaboration.protectsSource(at: $0) }) ?? true) else { return }
         monitor = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, let url = self.fileURL, !self.loading else { return }
+                guard !self.collaboration.sourceAccessUnverified else { return }
+                guard !self.collaboration.protectsSource(at: url) else { self.monitor?.invalidate(); return }
                 let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
                 if values?.contentModificationDate != self.revision || values?.fileSize != self.revisionSize { self.reload() }
             }
@@ -654,6 +904,10 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     }
     func reload() {
         guard let url = fileURL, !loading else { return }
+        guard !collaboration.protectsSource(at: url) else {
+            reloadSharedSource()
+            return
+        }
         let current = generation; loading = true
         Task {
             do {
@@ -742,6 +996,11 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     }
     func toggleTask(before: String, offset: Int, checked: Bool, token: String) {
         guard token == highlightToken, !loading, !writing, !preparingPrint else { return }
+        // Checkbox changes belong to the shared document, not to comment privacy.
+        if collaboration.currentDocument != nil {
+            sharedToggleTask(before: before, offset: offset, checked: checked, token: token)
+            return
+        }
         guard before == text, let updated = TaskListEdit.setChecked(checked, atUTF16: offset, in: text) else {
             error = "The task changed before it could be checked. Please try again."
             render(); return
@@ -788,6 +1047,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         if ready { pendingPosition = nil }
         script("render", [text, "folio-asset://\(assetHandler.token)/", highlightToken, value, highlightsReadable, position, editingEnabled && !loading && !writing])
         applyAppearance()
+        refreshSharedReview()
     }
     func applyAppearance() {
         guard let data = try? JSONEncoder().encode(layout), let value = try? JSONSerialization.jsonObject(with: data) else { return }
@@ -814,6 +1074,101 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         }
     }
     @Published var preparingPrint = false
+    @Published var copyContentBusy = false
+    @Published private(set) var contentCopied = false
+    private struct ContentRequest {
+        let id: UUID
+        let document: UUID
+        let sourceMode: Bool
+        let editing: Bool
+        let token: String
+        let editorID: ObjectIdentifier?
+    }
+    private var contentRequest: ContentRequest?
+    private var contentTimeout: Task<Void, Never>?
+    private var copiedStatusTask: Task<Void, Never>?
+    private func currentContentRequest(_ id: UUID) -> ContentRequest? {
+        guard let request = contentRequest, request.id == id,
+              request.document == documentID, request.sourceMode == writing,
+              request.editing == editingEnabled, request.token == highlightToken else { return nil }
+        return request
+    }
+    func cancelCopyContent(message: String = "The editor changed before copying. Try Copy content again.") {
+        guard contentRequest != nil else { return }
+        let completion = contentSnapshotCompletion; contentSnapshotCompletion = nil
+        contentRequest = nil; contentTimeout?.cancel(); contentTimeout = nil
+        copyContentBusy = false; contentCopied = false; error = message
+        completion?(nil)
+    }
+    func copyContent() {
+        guard !sharedSaveBusy else { return }
+        requestContentSnapshot(nil)
+    }
+    func requestContentSnapshot(_ completion: ((String?) -> Void)?) {
+        guard !loading, !preparingPrint, contentRequest == nil else { completion?(nil); return }
+        contentSnapshotCompletion = completion
+        copiedStatusTask?.cancel(); contentCopied = false
+        let id = UUID()
+        contentRequest = ContentRequest(id: id, document: documentID, sourceMode: writing,
+            editing: editingEnabled, token: highlightToken, editorID: editor.map(ObjectIdentifier.init))
+        copyContentBusy = true
+        contentTimeout = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(15)) } catch { return }
+            guard self?.currentContentRequest(id) != nil else { return }
+            self?.cancelCopyContent(message: "The editor hasn’t finished preparing the content. Finish your edit, then try Copy content again.")
+        }
+        if writing {
+            guard let editor else { cancelCopyContent(message: "The source editor is unavailable. Reopen Source, then try Copy content again."); return }
+            if !editor.hasMarkedText() { finishSourceContent(editor, requestID: id) }
+            return
+        }
+        guard ready, let webView else { cancelCopyContent(message: "The reading view is not ready. Reopen the document, then try Copy content again."); return }
+        webView.evaluateJavaScript("window.Folio.requestContent('\(id.uuidString)')") { [weak self] _, failure in
+            Task { @MainActor in
+                guard failure != nil, self?.currentContentRequest(id) != nil else { return }
+                self?.cancelCopyContent(message: "The reading view couldn’t prepare the content. Reopen the document, then try Copy content again.")
+            }
+        }
+    }
+    func sourceEditorPostChange(_ view: NSTextView) {
+        guard let request = contentRequest, request.sourceMode else { return }
+        DispatchQueue.main.async { [weak self, weak view] in
+            guard let self, let view, !view.hasMarkedText() else { return }
+            self.finishSourceContent(view, requestID: request.id)
+        }
+    }
+    private func finishSourceContent(_ view: NSTextView, requestID: UUID) {
+        guard let request = currentContentRequest(requestID), request.sourceMode,
+              editor === view, request.editorID == ObjectIdentifier(view), !view.hasMarkedText() else { return }
+        sourceEditorDidChange(view.string)
+        guard text == view.string else { cancelCopyContent(message: "The source editor couldn’t synchronize. Try Copy content again."); return }
+        finishContent(view.string, requestID: requestID)
+    }
+    func acceptContentSnapshot(requestID: String, token: String, text snapshot: String) {
+        guard let id = UUID(uuidString: requestID), let request = currentContentRequest(id),
+              !request.sourceMode, token == request.token else { return }
+        guard snapshot == text else { cancelCopyContent(message: "The editor couldn’t synchronize the current content. Try Copy content again."); return }
+        finishContent(snapshot, requestID: id)
+    }
+    func rejectContentSnapshot(requestID: String, token: String, message: String) {
+        guard let id = UUID(uuidString: requestID), let request = currentContentRequest(id), token == request.token else { return }
+        cancelCopyContent(message: String(message.prefix(300)))
+    }
+    private func finishContent(_ source: String, requestID: UUID) {
+        guard currentContentRequest(requestID) != nil else { return }
+        // Invalidate before writing so duplicate or late callbacks cannot write again.
+        contentRequest = nil; contentTimeout?.cancel(); contentTimeout = nil; copyContentBusy = false
+        if let completion = contentSnapshotCompletion { contentSnapshotCompletion = nil; completion(source); return }
+        guard !source.isEmpty else { error = "The document is empty. There’s nothing to copy."; return }
+        guard pasteboardWriter(source) else { error = "Couldn’t copy the content. Try again."; return }
+        contentCopied = true
+        NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
+            userInfo: [.announcement: "Copied", .priority: NSAccessibilityPriorityLevel.medium.rawValue])
+        copiedStatusTask = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(1500)) } catch { return }
+            self?.contentCopied = false
+        }
+    }
     func copyFormatted() {
         guard !writing else { error = "Close Source and select a passage to copy its formatting."; return }
         script("copyFormatted", [])

@@ -1,11 +1,13 @@
 import {anchor,locate,overlaps,unionSelection,commentTarget} from './highlight-anchors.js';
-let root,token='',records=[],writable=false,pending=null,busy=false,selecting=false,timer;
+let root,token='',records=[],writable=false,pending=null,busy=false,selecting=false,intent='private',timer;
 const send=message=>window.webkit?.messageHandlers.folio.postMessage(message);
 const toolbar=document.createElement('div');toolbar.id='highlight-tools';toolbar.hidden=true;toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','Text highlighting');
 const save=document.createElement('button');save.type='button';save.textContent='Highlight';save.title='Save highlight (⇧⌘H)';
 const remove=document.createElement('button');remove.type='button';remove.textContent='Remove highlight';
 const comment=document.createElement('button');comment.type='button';comment.textContent='Comment…';
-toolbar.append(save,comment,remove);document.body.append(toolbar);
+const modeToggle=document.createElement('span');modeToggle.className='review-mode-toggle';modeToggle.hidden=true;
+const modeButtons=['private','shared'].map(mode=>{const b=document.createElement('button');b.type='button';b.dataset.reviewMode=mode;b.textContent=mode==='private'?'Private':'Shared';b.addEventListener('pointerdown',e=>e.preventDefault());b.addEventListener('click',()=>{applyIntent(mode);send({type:'reviewModeChanged',token,mode});update();});modeToggle.append(b);return b;});
+toolbar.append(save,comment,remove,modeToggle);document.body.append(toolbar);
 const status=document.createElement('div');status.id='highlight-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.hidden=true;document.body.append(status);
 function announce(text){clearTimeout(timer);status.textContent=text;status.hidden=false;timer=setTimeout(()=>status.hidden=true,6000);}
 function nodes(){
@@ -59,10 +61,10 @@ function newID(){
 function update(){
  if(busy||selecting)return;
  const range=selection();if(!range&&pending?.ids&&!toolbar.hidden)return;pending=range;
- if(!range||!writable){toolbar.hidden=true;return;}
+ if(!range||(intent==='private'&&!writable)){toolbar.hidden=true;return;}
  const text=contents();const selected=anchor(text,range.start,range.end,'pending');
  if(!selected){toolbar.hidden=true;return;}
- save.hidden=false;remove.hidden=!records.some(r=>{const found=locate(text,r);return found&&overlaps(found,range);});show(range.rect);
+ save.hidden=false;remove.hidden=intent==='shared'||!records.some(r=>{const found=locate(text,r);return found&&overlaps(found,range);});show(range.rect);
 }
 function commit(next,commentID=null){
  if(busy||!writable)return;
@@ -71,8 +73,37 @@ function commit(next,commentID=null){
  busy=true;save.disabled=true;remove.disabled=true;comment.disabled=true;
  send({type:'saveHighlights',token,highlights:next,commentID});
 }
+function sharedAction(comment){
+ if(busy)return;
+ const range=selection();
+ if(!range||!anchor(contents(),range.start,range.end,'pending')){announce('Select between 1 and 20,000 characters to share.');return;}
+ toolbar.hidden=true;
+ // Keep the live selection intact for the native saved-source guard and async capture.
+ send({type:'sharedSelectionAction',token,comment});
+}
+function applyIntent(mode){
+ for(const b of modeButtons)b.setAttribute('aria-pressed',String(b.dataset.reviewMode===mode));
+ intent=mode;save.textContent=mode==='shared'?'Share highlight':'Highlight';
+ save.title=mode==='shared'?'Share highlight (⇧⌘H)':'Save highlight (⇧⌘H)';
+ comment.textContent=mode==='shared'?'Shared comment…':'Comment…';
+ if(mode==='shared')remove.hidden=true;
+}
+export function setSharedReviewMode(documentToken,mode){
+ if(!documentToken||documentToken!==token||!['private','shared'].includes(mode))return false;
+ applyIntent(mode);pending=null;toolbar.hidden=true;update();return true;
+}
 export function highlightSelection(){
- const range=selection()||pending;
+ if(intent==='shared'){sharedAction(false);return;}
+ savePrivateRange(selection()||pending);
+}
+export function keepSelectionPrivate(documentToken,captured){
+ if(!documentToken||documentToken!==token||captured?.token!==token)return false;
+ const text=contents(),range=anchor(text,captured.start,captured.start+captured.quote?.length,'');
+ if(!range||range.quote!==captured.quote||range.prefix!==captured.prefix||range.suffix!==captured.suffix)return false;
+ applyIntent('private');pending=null;toolbar.hidden=true;
+ savePrivateRange({start:captured.start,end:captured.start+captured.quote.length});return true;
+}
+function savePrivateRange(range){
  if(!range){announce('Select some text first, then choose Highlight.');return;}
  if(!writable){announce('Highlights are unavailable until this document is reopened.');return;}
  const text=contents(),merged=unionSelection(range,records.filter(r=>!r.comment).map(r=>locate(text,r)).filter(Boolean));
@@ -82,11 +113,13 @@ export function highlightSelection(){
  commit([...kept,record]);
 }
 function removeSelection(){
+ if(intent==='shared')return;
  if(!pending)return;
  const text=contents(),ids=pending.ids;
  commit(records.filter(r=>{if(ids)return !ids.includes(r.id);const range=locate(text,r);return !range||!overlaps(range,pending);}));
 }
 function commentSelection(){
+ if(intent==='shared'){sharedAction(true);return;}
  const target=commentTarget(contents(),records,selection()||pending,newID());
  if(!target||!writable||busy)return;
  if(records.some(r=>r.id===target.id))send({type:'commentHighlight',token,id:target.id});
@@ -103,7 +136,10 @@ document.addEventListener('pointercancel',()=>{selecting=false;toolbar.hidden=tr
 document.addEventListener('click',event=>{
  const mark=event.target.closest('mark.folio-highlight');
  if(mark&&writable&&!busy&&window.getSelection()?.isCollapsed){
-  pending={ids:mark.dataset.highlightIds.split(' ')};save.hidden=true;remove.hidden=false;show(mark.getBoundingClientRect());
+  if(intent==='shared'){toolbar.hidden=true;pending=null;return;}
+  const ids=mark.dataset.highlightIds.split(' '),commented=records.find(record=>ids.includes(record.id)&&record.comment);
+  if(commented){toolbar.hidden=true;pending=null;send({type:'commentHighlight',token,id:commented.id});return;}
+  pending={ids};save.hidden=true;remove.hidden=false;show(mark.getBoundingClientRect());
  }else if(!toolbar.contains(event.target)&&window.getSelection()?.isCollapsed){toolbar.hidden=true;pending=null;}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){toolbar.hidden=true;pending=null;}});
@@ -111,6 +147,7 @@ window.addEventListener('scroll',()=>toolbar.hidden=true,{passive:true});
 window.addEventListener('resize',()=>toolbar.hidden=true);
 export function restoreHighlights(documentToken,saved,canSave){
  root=document.getElementById('document');token=documentToken;records=saved||[];writable=canSave;pending=null;busy=false;toolbar.hidden=true;status.hidden=true;save.disabled=false;remove.disabled=false;comment.disabled=false;
+ modeToggle.hidden=true;applyIntent('private');
  const missing=paint();if(missing)announce(`${missing} saved highlight${missing===1?' could':'s could'} not be located after the text changed.`);
 }
 export function highlightsSaved(documentToken,saved){
@@ -131,4 +168,16 @@ export function navigateHighlight(id){
  requestAnimationFrame(()=>{
   marks[0].scrollIntoView({behavior:'instant',block:'center'});
  });
+}
+
+export function setReviewAvailability(documentToken,enabled,mode){
+ if(!documentToken||documentToken!==token)return false;
+ modeToggle.hidden=!enabled;if(['private','shared'].includes(mode))applyIntent(enabled?mode:'private');return true;
+}
+export function privateCommentInfo(documentToken,id){
+ if(!documentToken||documentToken!==token||!writable)return null;
+ const record=records.find(r=>r.id===id);if(!record)return null;
+ const marks=()=>[...root.querySelectorAll('mark.folio-highlight')].filter(mark=>mark.dataset.highlightIds.split(' ').includes(id));
+ if(!marks().length)return null;
+ return {quote:record.quote,comment:record.comment||'',reveal:()=>{for(let parent=marks()[0]?.parentElement;parent&&parent!==root;parent=parent.parentElement){if(parent.tagName==='DETAILS')parent.open=true;}marks()[0]?.scrollIntoView({block:'nearest',behavior:'instant'});},rect:()=>marks()[0]?.getBoundingClientRect()||null};
 }

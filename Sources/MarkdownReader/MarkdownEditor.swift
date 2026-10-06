@@ -20,23 +20,39 @@ struct MarkdownEditor: NSViewRepresentable {
         return scroll
     }
     func updateNSView(_ scroll: NSScrollView, context: Context) {
+        updateEditor(scroll, coordinator: context.coordinator)
+    }
+    // Use the same path for representable updates and regression coverage.
+    func updateEditor(_ scroll: NSScrollView, coordinator: Coordinator) {
         guard let view = scroll.documentView as? NSTextView else { return }
-        if model.writing && view.string != model.text { view.string = model.text; view.undoManager?.removeAllActions() }
+        if model.writing && view.string != model.text && !view.hasMarkedText(),
+           !coordinator.wasWriting || coordinator.documentID != model.documentID ||
+           (model.text != coordinator.lastModelText && view.string == coordinator.lastModelText) {
+            view.string = model.text; view.undoManager?.removeAllActions()
+        }
+        coordinator.lastModelText = model.text; coordinator.documentID = model.documentID
         view.isEditable = !model.loading && model.writing
         scroll.isHidden = !model.writing
-        if context.coordinator.wasWriting != model.writing {
-            context.coordinator.wasWriting = model.writing
+        if coordinator.wasWriting != model.writing {
+            coordinator.wasWriting = model.writing
             if model.writing { DispatchQueue.main.async { view.window?.makeFirstResponder(view) } }
             else if view.window?.firstResponder === view { view.window?.makeFirstResponder(model.webView) }
         }
     }
-    final class Coordinator: NSObject, NSTextViewDelegate {
+    static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
+        if coordinator.model.editor === scroll.documentView { coordinator.model.editor = nil }
+        (scroll.documentView as? NSTextView)?.delegate = nil
+    }
+    @MainActor final class Coordinator: NSObject, NSTextViewDelegate {
         let model: ReaderModel
         var wasWriting = false
-        init(_ model: ReaderModel) { self.model = model }
+        var lastModelText: String
+        var documentID: UUID
+        init(_ model: ReaderModel) { self.model = model; lastModelText = model.text; documentID = model.documentID }
         func textDidChange(_ notification: Notification) {
             guard let view = notification.object as? NSTextView else { return }
             model.sourceEditorDidChange(view.string)
+            model.sourceEditorPostChange(view)
         }
     }
 }

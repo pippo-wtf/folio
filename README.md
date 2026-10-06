@@ -37,6 +37,12 @@ Beautiful typography. A clean page. Your own Markdown files.
 - **Share something polished.** Export a PDF or copy formatted text into another app.
 - **Keep your files yours.** Open and save regular `.md` files. No proprietary library to move into.
 
+## Shared review · Staging preview
+
+Review Markdown together in a shared folder: highlight passages, leave comments and see who completed a task. Private marks stay private, and conflicting text edits are kept for review.
+
+[Try the Staging workflow](docs/COLLABORATION-STAGING.md). Two-Mac OneDrive acceptance is still pending; this preview is not included in the public download.
+
 ## A closer look
 
 **Keep your thinking beside the text.** Saved highlights and comments stay within reach in the Marked sidebar.

@@ -77,6 +77,31 @@ let activeCleanup=()=>{};
 export function setupEditing(initial,initialBlocks,complexBlocks,assetPrefix,token,enabled,send){
  activeCleanup();activeCleanup=()=>{};document.getElementById('format-bar')?.remove();
  let source=initial,active=null,range=null,structuredEditSerial=0;
+ let cancelled=false,composing=false,contentRequest=null,contentTimer=null;
+ const contentFailure=(requestID,text)=>send({type:'contentFailed',requestID,token,text});
+ const cancelContent=()=>{
+  cancelled=true;clearTimeout(contentTimer);
+  if(contentRequest){contentFailure(contentRequest,'The editor changed before copying. Try Copy content again.');contentRequest=null;}
+ };
+ const controller={
+  requestContent(requestID){
+   if(cancelled)return;
+   if(contentRequest)contentFailure(contentRequest,'The copy request was replaced. Try Copy content again.');
+   contentRequest=requestID;
+   if(!composing)finishContent();
+  },
+  cleanup(){if(!cancelled)activeCleanup();}
+ };
+ function finishContent(){
+  clearTimeout(contentTimer);
+  if(cancelled||composing||!contentRequest)return;
+  const requestID=contentRequest;contentRequest=null;
+  if(enabled&&(panel||bar.querySelector('input'))){contentFailure(requestID,'Apply or cancel the open edit before copying.');return;}
+  if(enabled&&!commit()){contentFailure(requestID,'The editor could not synchronize. Try Copy content again.');return;}
+  send({type:'contentReady',requestID,token,text:source});
+ }
+ const compositionStart=()=>{composing=true;clearTimeout(contentTimer);};
+ const compositionEnd=()=>{composing=false;if(contentRequest)contentTimer=setTimeout(finishContent,0);};
  const root=document.getElementById('document'),original=new WeakMap(),protectedNodes=[];
  const nodes=[...root.childNodes],ordinaryById=new Map(initialBlocks.map(block=>[block.id,block])),complexById=new Map(complexBlocks.map(block=>[block.id,block]));let pending=[],offset=0;
  const fragment=document.createDocumentFragment();
@@ -130,8 +155,8 @@ export function setupEditing(initial,initialBlocks,complexBlocks,assetPrefix,tok
  if(!enabled){
   const historyKey=e=>{if(e.metaKey&&e.key.toLowerCase()==='z'){e.preventDefault();send({type:e.shiftKey?'redoEdit':'undoEdit'});}};
   root.addEventListener('keydown',historyKey);
-  activeCleanup=()=>{root.removeEventListener('change',taskChange);root.removeEventListener('keydown',historyKey);};
-  root.removeAttribute('contenteditable');root.setAttribute('aria-label','Document');return;
+  activeCleanup=()=>{cancelContent();root.removeEventListener('change',taskChange);root.removeEventListener('keydown',historyKey);};
+  root.removeAttribute('contenteditable');root.setAttribute('aria-label','Document');return controller;
  }
  // Measure the first visible line, so controls stay aligned at every font size.
  const positionControls=()=>root.querySelectorAll('.complex-passage').forEach(host=>{
@@ -156,12 +181,13 @@ export function setupEditing(initial,initialBlocks,complexBlocks,assetPrefix,tok
  const count=()=>{bar.querySelector('#word-count').textContent=documentWordCount(root).toLocaleString()+' words';};count();
  function commit(passage='document'){
   if(protectedNodes.some(node=>node.parentNode!==root)){
-   send({type:'editingRejected',token});return;
+   send({type:'editingRejected',token});return false;
   }
   const newline=initial.includes('\r\n')?'\r\n':'\n';
   const next=serializeDocument(root.childNodes,original,tail,newline);
   if(next!==source){const before=source;source=next;send({type:'editDocument',token,before,text:source,passage});}
   if(!panel)count();
+  return true;
  }
  const select=()=>{
   const selection=getSelection();if(!selection?.rangeCount)return;
@@ -324,6 +350,8 @@ export function setupEditing(initial,initialBlocks,complexBlocks,assetPrefix,tok
   }
   document.execCommand(button.dataset.block?'formatBlock':button.dataset.command,false,button.dataset.block||null);commit(active);select();
  });
+ root.addEventListener('compositionstart',compositionStart);root.addEventListener('compositionend',compositionEnd);
  root.addEventListener('keydown',keydown);root.addEventListener('input',input);root.addEventListener('paste',paste);root.addEventListener('drop',drop);root.addEventListener('beforeinput',beforeinput);root.addEventListener('click',rootClick);document.addEventListener('selectionchange',select);
- activeCleanup=()=>{root.removeEventListener('change',taskChange);observer.disconnect();closePanel();root.setAttribute('aria-label','Document');root.removeAttribute('contenteditable');root.removeAttribute('role');root.removeAttribute('aria-multiline');root.removeEventListener('keydown',keydown);root.removeEventListener('input',input);root.removeEventListener('paste',paste);root.removeEventListener('drop',drop);root.removeEventListener('beforeinput',beforeinput);root.removeEventListener('click',rootClick);document.removeEventListener('selectionchange',select);};
+ activeCleanup=()=>{cancelContent();root.removeEventListener('compositionstart',compositionStart);root.removeEventListener('compositionend',compositionEnd);root.removeEventListener('change',taskChange);observer.disconnect();closePanel();root.setAttribute('aria-label','Document');root.removeAttribute('contenteditable');root.removeAttribute('role');root.removeAttribute('aria-multiline');root.removeEventListener('keydown',keydown);root.removeEventListener('input',input);root.removeEventListener('paste',paste);root.removeEventListener('drop',drop);root.removeEventListener('beforeinput',beforeinput);root.removeEventListener('click',rootClick);document.removeEventListener('selectionchange',select);};
+ return controller;
 }

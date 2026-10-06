@@ -1,13 +1,29 @@
 import {setupEditing} from './editing.js';
 import {parse} from './parser.js';
 import {applyLayout} from './layout.js';
-import {restoreHighlights,highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight} from './highlights.js';
+import {restoreHighlights,highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,setSharedReviewMode,keepSelectionPrivate,setReviewAvailability,privateCommentInfo} from './highlights.js';
 import {renderDiagrams} from './diagrams.js';
+import {createSharedReview} from './shared-review.js';
+import {createReviewPopover} from './review-popover.js';
+let editorController=null,sharedReview=null,reviewPopover=null;
 let codes=[],renderVersion=0,positionToken='',positionTimer;
 let restoring=false,diagramWork=Promise.resolve();
 const send=message=>window.webkit?.messageHandlers.folio.postMessage(message);
 window.Folio={
- highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,
+ highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,setSharedReviewMode,keepSelectionPrivate,
+ setReviewContext(token,context){if(!reviewPopover||!token||token!==positionToken)return false;const accepted=reviewPopover.update(token,context);if(accepted)setReviewAvailability(token,!!context.enabled,context.mode);return accepted;},
+ openReviewThread(token,id,focus=false){return reviewPopover?.openThread(token,id,focus)||false;},
+ openReviewTask(token,id){return reviewPopover?.openTask(token,id)||false;},
+ openPrivateComment(token,id){return reviewPopover?.openPrivate(token,id)||false;},
+ privateCommentResult(token,id,error){return reviewPopover?.privateResult(token,id,error)||false;},
+ updateSharedReview(token,records){
+  if(!sharedReview||!token||token!==positionToken)return {accepted:false,token,painting:'stale',records:[]};
+  return sharedReview.update(token,records);
+ },
+ locateSharedReview(token,records){return sharedReview?.preview(token,records)||{accepted:false,token,records:[],reason:'stale'};},
+ navigateSharedHighlight(token,id){return sharedReview?.navigate(token,id)||{status:'stale'};},
+ sharedSelection(token){return sharedReview?.selection(token)||null;},
+ requestContent(requestID){if(!editorController)throw new Error('The editor is not ready');editorController.requestContent(requestID);},
  focusTask(offset){document.querySelector(`input[data-task-offset="${Number(offset)}"]`)?.focus({preventScroll:true});},
  updateCode(index,text){if(Number.isInteger(index)&&index>=0&&index<codes.length)codes[index]=text;},
  finishExport(){
@@ -64,10 +80,15 @@ window.Folio={
    const selection=getSelection(),range=document.createRange();range.selectNodeContents(previousHost);
    if(previousHost.contains(selection.focusNode)){range.setEnd(selection.focusNode,selection.focusOffset);caret={id:previousHost.dataset.edit,offset:range.toString().length};}
   }
+  reviewPopover?.cleanup();reviewPopover=null;
+  sharedReview?.cleanup();sharedReview=null;
+  editorController?.cleanup();
   document.getElementById('document').innerHTML=result.html;
   document.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false;}));
-  setupEditing(markdown,result.blocks,result.complexBlocks,assetPrefix,highlightToken,editing,send);
+  editorController=setupEditing(markdown,result.blocks,result.complexBlocks,assetPrefix,highlightToken,editing,send);
   restoreHighlights(highlightToken,highlights,canSaveHighlights);
+  sharedReview=createSharedReview(document.getElementById('document'),highlightToken,send);
+  reviewPopover=createReviewPopover(document.getElementById('document'),highlightToken,markdown,send,sharedReview,privateCommentInfo);
   if(caret&&editing){
    const host=document.getElementById('document');
    if(host){host.focus({preventScroll:true});const walker=document.createTreeWalker(host,NodeFilter.SHOW_TEXT);let node,last,offset=caret.offset;

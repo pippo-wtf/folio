@@ -1,6 +1,11 @@
 import Foundation
 
 enum BuildChannel {
+    #if FOLIO_STAGING && !FOLIO_UPDATE_TEST
+    static let collaborationAvailable = true
+    #else
+    static let collaborationAvailable = false
+    #endif
     // Seed appearance only once. Each edition owns its subsequent preferences.
     static func prepareDefaults() {
         guard let url = Bundle.module.url(forResource: "InitialAppearance", withExtension: "json", subdirectory: "Resources"),

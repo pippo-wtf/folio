@@ -61,6 +61,12 @@ struct ReaderWebView: NSViewRepresentable {
         return view
     }
     func updateNSView(_ nsView: WKWebView, context: Context) {}
+    static func dismantleNSView(_ view: WKWebView, coordinator: Coordinator) {
+        coordinator.model.cancelCopyContent()
+        view.configuration.userContentController.removeScriptMessageHandler(forName: "folio")
+        view.navigationDelegate = nil
+        if coordinator.model.webView === view { coordinator.model.ready = false; coordinator.model.webView = nil }
+    }
     // Only app-bundled font data is embedded; document content cannot supply fonts.
     private func bundledFontsCSS() -> String {
         let faces = [("Oswald", "Oswald", "normal", "200 700"),
@@ -96,6 +102,14 @@ struct ReaderWebView: NSViewRepresentable {
                 if let before = body["before"] as? String, let updated = body["text"] as? String, let token = body["token"] as? String {
                     model.acceptRenderedEdit(before: before, text: updated, token: token, passage: body["passage"] as? String ?? "")
                 }
+            case "contentReady":
+                if let requestID = body["requestID"] as? String, let token = body["token"] as? String, let text = body["text"] as? String {
+                    model.acceptContentSnapshot(requestID: requestID, token: token, text: text)
+                }
+            case "contentFailed":
+                if let requestID = body["requestID"] as? String, let token = body["token"] as? String, let text = body["text"] as? String {
+                    model.rejectContentSnapshot(requestID: requestID, token: token, message: text)
+                }
             case "editingRejected":
                 model.error = "That edit would remove a complex block. The current draft has been restored; use Source for that change."
                 model.render()
@@ -113,6 +127,25 @@ struct ReaderWebView: NSViewRepresentable {
                    let data = try? JSONSerialization.data(withJSONObject: array), data.count <= 2_000_000,
                    let records = try? JSONDecoder().decode([SavedHighlight].self, from: data) {
                     model.saveHighlights(records, token: token, commentID: body["commentID"] as? String)
+                }
+            case "reviewModeChanged", "reviewCommentDraft", "reviewCommentSubmit", "reviewThreadState", "reviewTaskState", "reviewTaskAtOffset", "reviewTaskApply":
+                model.acceptReviewContextEvent(body)
+            case "privateCommentSubmit":
+                if let token = body["token"] as? String, let id = body["id"] as? String, let text = body["text"] as? String {
+                    model.submitPrivateComment(id, text: text, token: token)
+                }
+            case "sharedSelectionAction":
+                if let token = body["token"] as? String, token == model.reviewRenderToken,
+                   model.sharedReview.mode == .shared {
+                    model.shareSelectedText(comment: body["comment"] as? Bool ?? false)
+                }
+            case "sharedHighlightClicked":
+                if let token = body["token"] as? String, let id = body["id"] as? String {
+                    model.sharedHighlightClicked(id: id, token: token)
+                }
+            case "sharedReviewAnchors":
+                if let token = body["token"] as? String, let records = body["records"] as? [[String: Any]], records.count <= 2000 {
+                    model.acceptSharedAnchorStatuses(token: token, records: records)
                 }
             case "commentHighlight":
                 if let token = body["token"] as? String, let id = body["id"] as? String {
