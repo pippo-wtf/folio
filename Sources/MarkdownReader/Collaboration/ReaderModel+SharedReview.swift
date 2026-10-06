@@ -37,7 +37,12 @@ extension ReaderModel {
         let tasks: [[String: Any]] = collaboration.state?.tasks.keys.sorted { $0.uuidString < $1.uuidString }.compactMap { id in
             guard let document, let origin = collaboration.state?.tasks[id], origin.documentID == document.documentID,
                   case .taskRegistered(_, let anchor) = origin.payload else { return nil }
-            return ["id": id.uuidString, "offset": SharedTaskMatcher.locate(anchor, in: source) as Any? ?? NSNull(), "line": anchor.line,
+            let heads = Set(collaboration.state?.taskHeads[id] ?? [])
+            let completion = heads.count == 1 ? collaboration.events.first { event in
+                guard heads.contains(event.id), case .taskState(_, .done, _, _) = event.payload else { return false }
+                return true
+            } : nil
+            return ["doneBy": completion?.authorName as Any? ?? NSNull(), "id": id.uuidString, "offset": SharedTaskMatcher.locate(anchor, in: source) as Any? ?? NSNull(), "line": anchor.line,
                     "states": collaboration.sharedTaskStates(taskID: id).map(\.rawValue), "status": collaboration.sharedTaskSourceStatus(taskID: id, source: source)]
         } ?? []
         return ["enabled": document != nil, "mode": sharedReview.mode == .shared ? "shared" : "private", "busy": sharedReview.busy,

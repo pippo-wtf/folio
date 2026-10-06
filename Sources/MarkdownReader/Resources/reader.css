@@ -251,3 +251,7 @@ eqn{display:block;margin:1.6em 0;text-align:center;overflow:auto}
 
 /* Custom Highlight ranges have no element on which to set a cursor. */
 html.folio-review-hover #document,html.folio-review-hover #document *{cursor:pointer!important}
+
+.task-list-item-checkbox:checked ~ .folio-task-text{text-decoration:line-through}
+.review-task-accessory[hidden]{display:none!important}
+span.review-task-accessory{cursor:default}

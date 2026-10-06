@@ -4,6 +4,20 @@ import WebKit
 @testable import MarkdownReader
 
 final class ContextualReviewRendererTests: XCTestCase {
+    @MainActor func testCompletedTasksStrikeOnlyTheirOwnTextAndShowCompleter() async throws {
+        let (view, _) = try await CollaborationRendererTests().web()
+        defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let css = try String(contentsOf: root.appendingPathComponent("Sources/MarkdownReader/Resources/reader.css"), encoding: .utf8)
+        let cssJSON = String(data: try JSONSerialization.data(withJSONObject: [css]), encoding: .utf8)!
+        _ = try await view.evaluateJavaScript("window.style=document.createElement('style');style.textContent=\(cssJSON)[0];document.head.append(style);Folio.render('- [x] Parent\\n  - [ ] Child','','current',[],true,null,false);window.offset=Number(document.querySelector('input[data-task-offset]').dataset.taskOffset);Folio.setReviewContext('current',{enabled:true,mode:'shared',tasks:[{id:'task',offset,states:['done'],doneBy:'Alex'}],threads:[]});void 0")
+        let result = try await view.evaluateJavaScript("({labels:Array.from(document.querySelectorAll('.review-task-accessory')).filter(b=>!b.hidden).map(b=>b.textContent),strike:Array.from(document.querySelectorAll('.folio-task-text')).map(n=>getComputedStyle(n).textDecorationLine)})") as! [String: Any]
+        XCTAssertEqual(result["labels"] as? [String], ["Done by Alex"])
+        XCTAssertEqual(result["strike"] as? [String], ["line-through", "none"])
+        _ = try await view.evaluateJavaScript("document.querySelector('input[data-task-offset]').checked=false;Folio.setReviewContext('current',{enabled:true,mode:'shared',tasks:[{id:'task',offset,states:['open']}],threads:[]});void 0")
+        let visible = try await view.evaluateJavaScript("Array.from(document.querySelectorAll('.review-task-accessory')).filter(b=>!b.hidden).length") as? Int
+        XCTAssertEqual(visible, 0)
+    }
     @MainActor func testTaskChoicesAreBinaryAndSharedPassagesShowPointerOnlyOnHover() async throws {
         let harness = CollaborationRendererTests(); let (view, _) = try await harness.web()
         defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }

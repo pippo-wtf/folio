@@ -96,6 +96,15 @@ export function parse(markdown, assetPrefix='folio-asset://unavailable/', editin
  md.renderer.rules.table_close=()=>'</table></div>';
  const metadataHTML=metadata?`<details class="metadata"><summary>Document properties</summary><pre><code>${md.utils.escapeHtml(metadata[1])}</code></pre></details>`:'';
  const env={}, tokens=md.parse(markdown,env);
+ // Wrap only the checkbox's own inline text, so completed parents do not strike nested tasks.
+ for(const token of tokens){
+  const index=token.type==='inline'?token.children?.findIndex(c=>c.type==='html_inline'&&c.content.includes('class="task-list-item-checkbox"')):-1;
+  if(index===undefined||index<0)continue;
+  const start=new token.constructor('html_inline','',0);start.content='<span class="folio-task-text">';
+  const end=new token.constructor('html_inline','',0);end.content='</span>';
+  token.children.splice(index+1,0,start);token.children.push(end);
+ }
+
  if(editing){
   const offsets=[0];for(const match of markdown.matchAll(/\r\n|\n|\r/g))offsets.push(match.index+match[0].length);
   const base=metadata?.[0].length||0;

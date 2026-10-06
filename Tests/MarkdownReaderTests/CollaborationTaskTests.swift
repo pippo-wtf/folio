@@ -35,6 +35,9 @@ final class CollaborationTaskTests: XCTestCase {
         XCTAssertEqual(c.sharedTaskSourceStatus(taskID: task, source: snapshot.text), "Aligned with Markdown")
         let done = await c.setSharedTask(document: doc, taskID: task, state: .done)
         XCTAssertNotNil(done)
+        let model = ReaderModel(collaboration: c)
+        let payload = model.sharedReviewContext()["tasks"] as? [[String: Any]]
+        XCTAssertEqual(payload?.first?["doneBy"] as? String, profile.displayName)
         XCTAssertEqual(c.sharedTaskSourceStatus(taskID: task, source: snapshot.text), "Task status saved · Markdown update pending")
         await c.stopWatching()
     }

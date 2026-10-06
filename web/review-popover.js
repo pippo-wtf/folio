@@ -19,7 +19,7 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
  const labelFor=state=>state==='done'?'Done':'Open';
  const writable=()=>context.enabled&&!context.busy&&!root.inert;
  function position(){
-  for(const b of layer.children){const box=taskBox(Number(b.dataset.offset));if(!box){b.hidden=true;continue;}const r=box.getBoundingClientRect(),line=box.closest('li').getBoundingClientRect();b.hidden=r.bottom<0||r.top>win.innerHeight;b.style.left=Math.max(8,Math.min(line.right+8,win.innerWidth-b.offsetWidth-8))+'px';b.style.top=Math.max(8,r.top-3)+'px';}
+  for(const b of layer.children){const box=taskBox(Number(b.dataset.offset));if(!box){b.hidden=true;continue;}const r=box.getBoundingClientRect(),line=box.closest('li').getBoundingClientRect();b.hidden=b.dataset.completed!=='true'||r.bottom<0||r.top>win.innerHeight;b.style.left=Math.max(8,Math.min(line.right+8,win.innerWidth-b.offsetWidth-8))+'px';b.style.top=Math.max(8,r.top-3)+'px';}
   if(!active||panel.hidden)return;
   const rect=active.rect();if(!rect||rect.bottom<0||rect.top>win.innerHeight){close();return;}
   const p=popoverPosition(rect,panel.offsetWidth,panel.offsetHeight,win.innerWidth,win.innerHeight);panel.style.left=p.left+'px';panel.style.top=p.top+'px';
@@ -59,7 +59,7 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
   errorText(active.error);panel.hidden=false;position();if(focus)field.focus({preventScroll:true});
  }
  function openTask(offset,id){
-  const box=taskBox(offset);if(!box||!writable()||root.isContentEditable)return false;
+  const box=taskBox(offset);if(!box||!writable())return false;
   box.scrollIntoView({block:'nearest',behavior:'instant'});
   active={kind:'task',id,rect:()=>box.isConnected?box.getBoundingClientRect():null};panel.replaceChildren();header('Shared task');
   const task=context.tasks.find(t=>t.id===id);panel.append(element('p',task?.line||box.closest('li').textContent.trim()));
@@ -70,10 +70,11 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
   errorText(context.issue);panel.hidden=false;position();return true;
  }
  function accessories(){
-  layer.replaceChildren();if(!context.enabled||root.isContentEditable)return;
+  layer.replaceChildren();
   for(const box of root.querySelectorAll('input[data-task-offset]')){const offset=Number(box.dataset.taskOffset),task=context.tasks.find(t=>t.offset===offset),states=task?.states||[];
-   const label=states.length>1?'Conflicting status':labelFor(states[0]||(box.checked?'done':'open'));
-   const b=button(label,()=>openTask(offset,task?.id));b.className='review-task-accessory';b.dataset.offset=offset;b.setAttribute('aria-label','Shared task status: '+label);b.disabled=!writable();layer.append(b);}
+   const completed=box.checked,author=states.length===1&&states[0]==='done'&&typeof task?.doneBy==='string'?task.doneBy.trim():'';
+   const label=author?'Done by '+author:'Done';
+   const b=context.enabled?button(label,()=>openTask(offset,task?.id)):element('span',label);b.className='review-task-accessory';b.dataset.offset=offset;b.dataset.completed=String(completed);b.setAttribute('aria-label','Shared task status: '+label);b.disabled=!writable();layer.append(b);}
   position();
  }
  const outside=event=>{if(!panel.hidden&&!panel.contains(event.target)&&!layer.contains(event.target))close();};
