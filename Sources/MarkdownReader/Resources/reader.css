@@ -256,7 +256,7 @@ html.folio-review-hover #document,html.folio-review-hover #document *{cursor:poi
 
 .task-list-item-checkbox:checked ~ .folio-task-text{text-decoration:line-through}
 .review-task-accessory[hidden]{display:none!important}
-span.review-task-accessory{cursor:default}
+span.review-task-accessory,span.review-task-accessory:hover{cursor:default;background:var(--paper)}
 
 #review-popover,#review-popover textarea,#review-popover blockquote{scrollbar-width:none}
 #review-popover::-webkit-scrollbar,#review-popover textarea::-webkit-scrollbar,#review-popover blockquote::-webkit-scrollbar,.review-messages::-webkit-scrollbar{display:none;width:0;height:0}

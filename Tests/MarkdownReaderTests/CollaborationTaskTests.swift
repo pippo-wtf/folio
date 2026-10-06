@@ -4,6 +4,20 @@ import ReaderCore
 @testable import MarkdownReader
 
 final class CollaborationTaskTests: XCTestCase {
+    @MainActor func testCheckboxRecordsCompleterEvenWhenCommentPrivacyIsPrivate() async throws {
+        let (c, source, _) = try await CollaborationReviewTests().fixture()
+        let model = ReaderModel(collaboration: c)
+        model.recoveryStartupReady = true; model.load(source)
+        for _ in 0..<200 where model.loading { try await Task.sleep(for: .milliseconds(10)) }
+        model.sharedReview.mode = .privateReview
+        let offset = (model.text as NSString).range(of: "[ ]").location + 1
+        model.toggleTask(before: model.text, offset: offset, checked: true, token: model.reviewRenderToken)
+        for _ in 0..<200 where c.state?.tasks.isEmpty != false || model.sharedReview.busy { try await Task.sleep(for: .milliseconds(10)) }
+        let payload = model.sharedReviewContext()["tasks"] as? [[String: Any]]
+        XCTAssertEqual(payload?.first?["doneBy"] as? String, "Alex")
+        XCTAssertEqual(model.sharedReview.mode, .privateReview)
+        await c.stopWatching()
+    }
     @MainActor func testTaskStatusIsDurableBeforePendingSourceAndDoesNotResolveThread() async throws {
         let (c, source, _) = try await CollaborationReviewTests().fixture()
         let doc = try XCTUnwrap(c.currentDocument), snapshot = try DocumentSnapshot(url: source)

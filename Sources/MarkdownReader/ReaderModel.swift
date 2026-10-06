@@ -996,6 +996,11 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     }
     func toggleTask(before: String, offset: Int, checked: Bool, token: String) {
         guard token == highlightToken, !loading, !writing, !preparingPrint else { return }
+        // Checkbox changes belong to the shared document, not to comment privacy.
+        if collaboration.currentDocument != nil {
+            sharedToggleTask(before: before, offset: offset, checked: checked, token: token)
+            return
+        }
         guard before == text, let updated = TaskListEdit.setChecked(checked, atUTF16: offset, in: text) else {
             error = "The task changed before it could be checked. Please try again."
             render(); return

@@ -96,9 +96,7 @@ struct ReaderWebView: NSViewRepresentable {
             case "toggleTask":
                 if let before = body["before"] as? String, let token = body["token"] as? String,
                    let offset = body["offset"] as? Int, let checked = body["checked"] as? Bool {
-                    if model.sharedReview.mode == .shared && model.collaboration.currentDocument != nil {
-                        model.sharedToggleTask(before: before, offset: offset, checked: checked, token: token)
-                    } else { model.toggleTask(before: before, offset: offset, checked: checked, token: token) }
+                    model.toggleTask(before: before, offset: offset, checked: checked, token: token)
                 }
             case "editDocument":
                 if let before = body["before"] as? String, let updated = body["text"] as? String, let token = body["token"] as? String {

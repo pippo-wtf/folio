@@ -73,8 +73,8 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
   layer.replaceChildren();
   for(const box of root.querySelectorAll('input[data-task-offset]')){const offset=Number(box.dataset.taskOffset),task=context.tasks.find(t=>t.offset===offset),states=task?.states||[];
    const completed=box.checked,author=states.length===1&&states[0]==='done'&&typeof task?.doneBy==='string'?task.doneBy.trim():'';
-   const label=author?'Done by '+author:'Done';
-   const b=context.enabled?button(label,()=>openTask(offset,task?.id)):element('span',label);b.className='review-task-accessory';b.dataset.offset=offset;b.dataset.completed=String(completed);b.setAttribute('aria-label','Shared task status: '+label);b.disabled=!writable();layer.append(b);}
+   const label=author?'Done by '+author:'Done · author not recorded';
+   const b=element('span',label);b.className='review-task-accessory';b.dataset.offset=offset;b.dataset.completed=String(completed);b.setAttribute('aria-label',label);layer.append(b);}
   position();
  }
  const outside=event=>{if(!panel.hidden&&!panel.contains(event.target)&&!layer.contains(event.target))close();};
