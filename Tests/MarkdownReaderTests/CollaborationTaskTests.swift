@@ -4,6 +4,32 @@ import ReaderCore
 @testable import MarkdownReader
 
 final class CollaborationTaskTests: XCTestCase {
+    @MainActor func testSharedTaskRejectsNormalizationOnlyStaleSourceBeforeRecordingEvents() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let shared = root.appendingPathComponent("shared")
+        try FileManager.default.createDirectory(at: shared, withIntermediateDirectories: true)
+        let url = shared.appendingPathComponent("task.md")
+        let source = "- [ ] Caf\u{e9}\r\n"
+        try Data(source.utf8).write(to: url)
+        let coordinator = CollaborationCoordinator(enabled: true, localRoot: root.appendingPathComponent("local"))
+        await coordinator.join(folder: shared, create: true, displayName: "Test")
+        await coordinator.registerDocument(relativePath: "task.md")
+        coordinator.selectDocument(url: url)
+        let model = ReaderModel(collaboration: coordinator)
+        model.snapshot = try DocumentSnapshot(url: url)
+        model.text = source; model.baseline = source
+        let previousEvents = coordinator.events.map(\.id)
+        model.toggleTask(before: "- [ ] Cafe\u{301}\r\n", offset: 3, checked: true,
+            token: model.reviewRenderToken)
+        XCTAssertFalse(model.sharedReview.busy, "A stale source must be rejected before starting shared writes")
+        for _ in 0..<200 where model.sharedReview.busy { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(coordinator.events.map(\.id), previousEvents)
+        XCTAssertTrue(coordinator.state?.tasks.isEmpty == true)
+        XCTAssertEqual(try Data(contentsOf: url), Data(source.utf8))
+        await coordinator.stopWatching()
+    }
+
     @MainActor func testCheckboxRecordsCompleterEvenWhenCommentPrivacyIsPrivate() async throws {
         let (c, source, _) = try await CollaborationReviewTests().fixture()
         let model = ReaderModel(collaboration: c)

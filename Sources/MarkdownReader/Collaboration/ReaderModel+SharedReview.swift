@@ -144,18 +144,18 @@ extension ReaderModel {
     }
     func shareSelectedText(comment: Bool = false, reattach: UUID? = nil) {
         guard let document = collaboration.currentDocument, !sharedReview.busy, !loading, !writing, let snapshot else { sharedReview.issue = "Open a registered document in Reading and select a passage."; return }
-        guard !dirty, text == snapshot.text, collaboration.sourceObservations[document.documentID] == snapshot.bytes else {
+        guard !dirty, text.utf8.elementsEqual(snapshot.text.utf8), collaboration.sourceObservations[document.documentID] == snapshot.bytes else {
             let capturedText = text, capturedToken = reviewRenderToken
             // Capture before the native modal takes focus and can discard the DOM range.
             evaluateReview("sharedSelection", arguments: [capturedToken]) { [weak self] selection in
                 guard let self, let selection, selection["token"] as? String == capturedToken,
-                      self.text == capturedText else { self?.sharedReview.issue = "Select a passage in Reading, then try again."; return }
+                      self.text.utf8.elementsEqual(capturedText.utf8) else { self?.sharedReview.issue = "Select a passage in Reading, then try again."; return }
                 let alert = NSAlert(); alert.messageText = "Save this passage before sharing?"
                 alert.informativeText = "Shared marks refer to a saved revision. Save first, then select the passage again; or keep a private mark."
                 alert.addButton(withTitle: "Save first"); alert.addButton(withTitle: "Keep private"); alert.addButton(withTitle: "Cancel")
                 let response = alert.runModal()
                 guard self.reviewRenderToken == capturedToken, self.collaboration.currentDocument == document,
-                      self.text == capturedText else { self.sharedReview.issue = "The passage changed. Select it again."; return }
+                      self.text.utf8.elementsEqual(capturedText.utf8) else { self.sharedReview.issue = "The passage changed. Select it again."; return }
                 switch response {
                 case .alertFirstButtonReturn: self.requestSharedSave { [weak self] success in if success { self?.sharedReview.issue = "Saved. Select the passage again to share it." } }
                 case .alertSecondButtonReturn: self.keepSelectedTextPrivate(selection, token: capturedToken)
@@ -169,7 +169,7 @@ extension ReaderModel {
             guard let self, let value, value["token"] as? String == token,
                   let start = value["start"] as? Int, let quote = value["quote"] as? String,
                   let prefix = value["prefix"] as? String, let suffix = value["suffix"] as? String,
-                  !self.dirty, !self.writing, self.snapshot?.bytes == snapshot.bytes, self.text == snapshot.text else { self?.sharedReview.issue = "Select a passage in Reading, then try again."; return }
+                  !self.dirty, !self.writing, self.snapshot?.bytes == snapshot.bytes, self.text.utf8.elementsEqual(snapshot.text.utf8) else { self?.sharedReview.issue = "Select a passage in Reading, then try again."; return }
             let anchor = SharedAnchor(start: start, quote: quote, prefix: prefix, suffix: suffix, rawSourceRevision: CollaborationSnapshotID.hash(snapshot.bytes), decodedSourceRevision: HighlightStore.revision(snapshot.text))
             self.sharedReview.busy = true
             Task { @MainActor [weak self] in
@@ -242,7 +242,7 @@ extension ReaderModel {
                 }
                 for mark in marks {
                     guard self.documentID == generation, self.reviewRenderToken == token, self.collaboration.currentDocument == document else { return }
-                    guard !self.dirty, !self.writing, self.snapshot?.bytes == snapshot.bytes, self.text == snapshot.text else {
+                    guard !self.dirty, !self.writing, self.snapshot?.bytes == snapshot.bytes, self.text.utf8.elementsEqual(snapshot.text.utf8) else {
                         self.sharedReview.issue = "Save first before sharing the remaining marks. Already shared marks are kept."
                         return
                     }
@@ -270,8 +270,8 @@ extension ReaderModel {
         sharedTaskAtOffset(before: before, offset: offset, state: checked ? .done : .open, token: token)
     }
     func sharedTaskAtOffset(before: String, offset: Int, state: SharedTaskState, token: String) {
-        guard token == reviewRenderToken, before == text, let document = collaboration.currentDocument, let snapshot, !sharedReview.busy else { return }
-        guard !dirty, !loading, text == snapshot.text, collaboration.sourceObservations[document.documentID] == snapshot.bytes else { sharedReview.issue = "Save your draft before changing a shared task. No checkbox was changed."; return }
+        guard token == reviewRenderToken, before.utf8.elementsEqual(text.utf8), let document = collaboration.currentDocument, let snapshot, !sharedReview.busy else { return }
+        guard !dirty, !loading, text.utf8.elementsEqual(snapshot.text.utf8), collaboration.sourceObservations[document.documentID] == snapshot.bytes else { sharedReview.issue = "Save your draft before changing a shared task. No checkbox was changed."; return }
         let existing = collaboration.state?.tasks.compactMap { id, event -> UUID? in
             guard event.documentID == document.documentID, case .taskRegistered(_, let anchor) = event.payload, SharedTaskMatcher.locate(anchor, in: snapshot.text) == offset else { return nil }; return id
         } ?? []
@@ -309,7 +309,7 @@ extension ReaderModel {
         sharedReview.busy = true
         requestContentSnapshot { [weak self] source in
             guard let self, self.documentID == generation, self.collaboration.currentDocument == document else { return }
-            guard let source, !self.dirty, source == baseline.text,
+            guard let source, !self.dirty, source.utf8.elementsEqual(baseline.text.utf8),
                   self.collaboration.currentDocument == document, self.collaboration.sourceObservations[document.documentID] == baseline.bytes,
                   self.collaboration.state?.taskHeads[id] == [trigger],
                   let origin = self.collaboration.state?.tasks[id], case .taskRegistered(_, let anchor) = origin.payload,
@@ -323,7 +323,7 @@ extension ReaderModel {
                     self.sharedReview.busy = false
                     guard result.localApply == .applied || result.localApply == .unchanged else { self.sharedReview.issue = "Task status saved · Markdown update pending. Compare source versions."; return }
                     self.sharedReview.issue = nil
-                    if !self.dirty, self.text == source { self.reloadSharedSource(journalKind: .renderedEdit, expectedBytes: try baseline.encoded(proposed)) }
+                    if !self.dirty, self.text.utf8.elementsEqual(source.utf8) { self.reloadSharedSource(journalKind: .renderedEdit, expectedBytes: try baseline.encoded(proposed)) }
                 } catch {
                     guard self.documentID == generation, self.collaboration.currentDocument == document else { return }
                     self.sharedReview.busy = false; self.sharedReview.issue = "Task status saved · Markdown update pending. Retry or compare source versions."

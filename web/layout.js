@@ -33,6 +33,8 @@ export function layoutCSS(s={}) {
  .code-block,.table-scroll,.image-fallback{border-radius:${n('radius',0,16,2)}px;}
  .callout{border-left-width:${rule}px;${s.calloutStyle==='box'?'background:var(--soft);padding:1em;border-radius:'+n('radius',0,16,2)+'px;':'background:none;border-radius:0;padding:0 0 0 '+(rule?'1em':'0')+';'}}
  #reading-scroll-indicator{width:${n('scrollbarWidth',1,8,3)}px;}
+ /* Keep narrow panes readable; reserve the right gutter for contextual Edit controls. */
+ @media(max-width:640px){main{padding-left:24px;padding-right:48px;padding-top:min(${n('topInset',16,160,82)}px,48px);}}
  `;
 }
 export function applyLayout(settings,zoom=1) {
