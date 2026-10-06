@@ -4,6 +4,23 @@ import WebKit
 @testable import MarkdownReader
 
 final class ContextualReviewRendererTests: XCTestCase {
+    @MainActor func testLongDiscussionScrollsWithoutScrollbarAndKeepsTextSendButton() async throws {
+        let harness = CollaborationRendererTests(); let (view, _) = try await harness.web()
+        defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let css = try String(contentsOf: root.appendingPathComponent("Sources/MarkdownReader/Resources/reader.css"), encoding: .utf8)
+        let cssJSON = String(data: try JSONSerialization.data(withJSONObject: [css]), encoding: .utf8)!
+        _ = try await view.evaluateJavaScript("window.style=document.createElement('style');style.textContent=\(cssJSON)[0];document.head.append(style);void 0")
+        _ = try await view.evaluateJavaScript("Folio.render('Original.','','current',[],true,null,false);Folio.updateSharedReview('current',[\(harness.record)]);Folio.setReviewContext('current',{enabled:true,mode:'shared',threads:[{id:'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA',quote:'Original',messages:Array.from({length:30},(_,i)=>({id:String(i),author:'Alex',text:'Comment '+i}))}],tasks:[]});void 0")
+        _ = try await view.evaluateJavaScript("Folio.openReviewThread('current','AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA',false);void 0")
+        _ = try await view.evaluateJavaScript("window.messages=document.querySelector('.review-messages');messages.scrollTop=messages.scrollHeight;void 0")
+        let state = try await view.evaluateJavaScript("({scrolled:messages.scrollTop>0,hidden:getComputedStyle(messages).scrollbarWidth,button:document.querySelector('.review-submit').textContent,background:getComputedStyle(document.querySelector('.review-submit')).backgroundColor,mark:getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()})") as! [String: Any]
+        XCTAssertEqual(state["scrolled"] as? Bool, true)
+        XCTAssertEqual(state["hidden"] as? String, "none")
+        XCTAssertEqual(state["button"] as? String, "Send")
+        XCTAssertNotEqual(state["background"] as? String, "rgb(44, 255, 5)")
+        XCTAssertEqual(state["mark"] as? String, "#2CFF05")
+    }
     @MainActor func testCompletedTasksStrikeOnlyTheirOwnTextAndShowCompleter() async throws {
         let (view, _) = try await CollaborationRendererTests().web()
         defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
@@ -176,7 +193,7 @@ final class ContextualSelectionRendererTests: XCTestCase {
         XCTAssertEqual(focused["focused"] as? Bool, true, "Composer must own focus before testing focus CSS: \(focused)")
         XCTAssertEqual(focused["matches"] as? Bool, true, "Composer must match :focus before testing focus CSS: \(focused)")
         let dark = try await view.evaluateJavaScript("({fieldBorder:getComputedStyle(document.querySelector('#review-popover .review-composer')).borderColor,focusOutline:getComputedStyle(document.querySelector('#review-popover textarea')).outlineStyle})") as! [String: Any]
-        XCTAssertEqual(dark["fieldBorder"] as? String, "rgb(255, 155, 84)")
+        XCTAssertEqual(dark["fieldBorder"] as? String, "rgb(233, 233, 233)")
         XCTAssertEqual(dark["focusOutline"] as? String, "none")
     }
 

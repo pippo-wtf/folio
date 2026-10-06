@@ -55,21 +55,21 @@ struct CommentComposer: View {
                         .keyboardShortcut(.cancelAction)
                     Spacer()
                     Button { error = save(text) } label: {
-                        Image(systemName: "arrow.up").font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.black.opacity(0.85))
-                            .frame(width: 32, height: 32).background(accent, in: Circle())
+                        Text("Save comment").font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(paper).padding(.horizontal, 18).padding(.vertical, 10)
+                            .background(ink, in: RoundedRectangle(cornerRadius: 4))
                     }
                     .buttonStyle(.plain).keyboardShortcut(.return, modifiers: .command)
                     .accessibilityLabel("Save Comment").help("Enter to save · Shift+Enter for a new line")
                 }
                 .font(.system(size: 13))
             }
-            .padding(14)
+            .padding(20)
             .background(ink.opacity(0.035), in: RoundedRectangle(cornerRadius: 16))
             .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(ink.opacity(0.16), lineWidth: 1))
             if let error { Text(error).font(.system(size: 12)).foregroundStyle(ink).accessibilityAddTraits(.isStaticText) }
         }
         .padding(24).frame(width: 520)
-        .background(paper).foregroundStyle(ink).tint(accent)
+        .background(paper).foregroundStyle(ink).tint(ink)
     }
 }

@@ -28,7 +28,7 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
  function header(label){const h=element('header');h.append(element('strong',label),button('Close',close));panel.append(h);}
  function composer(value,submit,onDraft,allowEmpty=false){
   const field=element('textarea');field.rows=3;field.maxLength=20000;field.value=value;field.placeholder='Leave feedback for your agent…';field.setAttribute('aria-label','Comment');
-  const shell=element('div',undefined,'review-composer'),actions=element('div',undefined,'review-actions'),save=button('↑',()=>{if(!save.disabled)submit(field.value);});
+  const shell=element('div',undefined,'review-composer'),actions=element('div',undefined,'review-actions'),save=button(active.kind==='private'?'Save comment':'Send',()=>{if(!save.disabled)submit(field.value);});
   save.className='review-submit';save.dataset.reviewSubmit='';save.setAttribute('aria-label',active.kind==='private'?'Save comment':'Send comment');save.title='Enter to save · Shift+Enter for a new line';
   function update(){save.disabled=active?.pending||context.busy||(!allowEmpty&&!field.value.trim());}
   field.addEventListener('input',()=>{onDraft(field.value);update();});
@@ -41,7 +41,7 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
   const thread=context.threads.find(t=>t.id===active?.id);if(!thread){close();return;}
   const previous=panel.querySelector('textarea'),hadFocus=previous===doc.activeElement,caret=previous?[previous.selectionStart,previous.selectionEnd]:null;
   panel.replaceChildren();header('Shared thread');panel.append(element('small','Marked by '+(thread.author||'Unknown author')),element('blockquote',thread.quote));
-  const body=element('div',undefined,'review-messages');
+  const body=element('div',undefined,'review-messages');body.tabIndex=0;body.setAttribute('role','region');body.setAttribute('aria-label','Comments');
   for(const message of thread.messages||[]){const item=element('article');item.append(element('strong',message.author||'Unknown author'),element('p',message.text));if(message.replyTo)item.append(element('small','Reply to '+((thread.messages||[]).find(m=>m.id===message.replyTo)?.author||'comment')));
    const reply=button('Reply',()=>{active.replyTo=message.id;sendDraft(active.draft);drawThread(true);});reply.disabled=!writable();item.append(reply);body.append(item);}
   if(!(thread.messages||[]).length)body.append(element('p','No comments yet.'));panel.append(body);
