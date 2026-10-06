@@ -15,7 +15,7 @@ struct SharedReviewSidebar: View {
         VStack(alignment: .leading, spacing: 10) {
             Picker("Review privacy", selection: $review.mode) {
                 ForEach(SharedReviewController.Mode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }.pickerStyle(.segmented).accessibilityLabel("Highlight and comment privacy")
+            }.pickerStyle(.segmented).labelsHidden().accessibilityLabel("Highlight and comment privacy")
             Text(review.mode == .shared ? "New marks are shared with this folder." : "New marks stay private on this Mac.")
                 .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if review.mode == .shared {
@@ -28,7 +28,7 @@ struct SharedReviewSidebar: View {
                 .font(.system(size: 11)).buttonStyle(.borderless).disabled(model.marked.isEmpty || review.busy)
             Picker("Shared review view", selection: $review.tab) {
                 ForEach(SharedReviewController.Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }.pickerStyle(.segmented)
+            }.pickerStyle(.segmented).labelsHidden()
             if let document = collaboration.currentDocument {
                 if review.tab == .activity { activity(document) }
                 else { work(document) }
@@ -41,6 +41,9 @@ struct SharedReviewSidebar: View {
             if review.busy { ProgressView().controlSize(.small).accessibilityLabel("Saving shared review") }
             if let issue = review.issue { Text(issue).font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
         }
+        // Sidebar lists default to one line; shared comments and recovery hints need their full height.
+        .lineLimit(nil)
+        .fixedSize(horizontal: false, vertical: true)
         .onChange(of: review.mode) { _, _ in model.refreshSharedReview() }
         .sheet(isPresented: $review.showPrivatePreview) { privatePreview }
     }

@@ -56,7 +56,7 @@ extension ReaderModel {
             alert.addButton(withTitle: "Save first"); alert.addButton(withTitle: "Keep private"); alert.addButton(withTitle: "Cancel")
             switch alert.runModal() {
             case .alertFirstButtonReturn: requestSharedSave { [weak self] success in if success { self?.sharedReview.issue = "Saved. Select the passage again to share it." } }
-            case .alertSecondButtonReturn: script("highlightSelection", [])
+            case .alertSecondButtonReturn: keepSelectedTextPrivate()
             default: break
             }
             return
@@ -80,6 +80,11 @@ extension ReaderModel {
                 else { self.sharedReview.issue = "The shared mark was not saved. Retry or export local evidence." }
             }
         }
+    }
+    func keepSelectedTextPrivate() {
+        sharedReview.mode = .privateReview
+        script("setSharedReviewMode", [reviewRenderToken, "private"])
+        script("highlightSelection", [])
     }
     func submitSharedComment() {
         guard let document = collaboration.currentDocument, let thread = sharedReview.selectedThread, !sharedReview.busy else { return }
