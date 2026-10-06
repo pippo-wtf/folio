@@ -664,14 +664,33 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             script("highlightSaveFailed", [token])
         }
     }
+    func submitPrivateComment(_ id: String, text value: String, token: String) {
+        guard token == highlightToken, highlightsReadable,
+              let mark = marked.first(where: { $0.id == id }) else { return }
+        let draft = HighlightCommentDraft(id: id, quote: mark.quote, text: mark.comment ?? "", documentKey: highlightKey, token: token)
+        let issue = saveComment(value, draft: draft, redraw: false)
+        script("privateCommentResult", [token, id, issue as Any? ?? NSNull()])
+        if issue == nil, let data = try? JSONEncoder().encode(marked), let saved = try? JSONSerialization.jsonObject(with: data) {
+            script("highlightsSaved", [token, saved])
+        }
+    }
     func commentOnHighlight(_ id: String, token requestToken: String? = nil) {
         guard requestToken == nil || requestToken == highlightToken else { return }
         guard let index = marked.firstIndex(where: { $0.id == id }) else { return }
-        commentDraft = HighlightCommentDraft(id: id, quote: marked[index].quote,
+        let draft = HighlightCommentDraft(id: id, quote: marked[index].quote,
             text: marked[index].comment ?? "", documentKey: highlightKey, token: highlightToken)
+        guard ready, !writing, let webView,
+              let data = try? JSONSerialization.data(withJSONObject: [highlightToken, id]),
+              let arguments = String(data: data, encoding: .utf8) else { commentDraft = draft; return }
+        webView.evaluateJavaScript("window.Folio.openPrivateComment.apply(null, \(arguments))") { [weak self] opened, _ in
+            guard let self, self.highlightKey == draft.documentKey, self.highlightToken == draft.token,
+                  self.marked.contains(where: { $0.id == id }) else { return }
+            // Detached recovery is retained only when the passage cannot be located.
+            if opened as? Bool != true { self.commentDraft = draft }
+        }
     }
     /// Returns an error without dismissing the composer or losing its text.
-    func saveComment(_ value: String, draft: HighlightCommentDraft) -> String? {
+    func saveComment(_ value: String, draft: HighlightCommentDraft, redraw: Bool = true) -> String? {
         guard draft.documentKey == highlightKey, draft.token == highlightToken,
               let index = marked.firstIndex(where: { $0.id == draft.id }) else {
             return "This passage has changed. Close this comment and select it again."
@@ -684,7 +703,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             try highlightStore.save(records, for: draft.documentKey, revision: HighlightStore.revision(text), draft: dirty)
             marked = records
             commentDraft = nil
-            render()
+            if redraw { render() }
             return nil
         } catch { return "The comment could not be saved. Please try again." }
     }

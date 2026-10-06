@@ -130,6 +130,12 @@ struct ReaderWebView: NSViewRepresentable {
                    let records = try? JSONDecoder().decode([SavedHighlight].self, from: data) {
                     model.saveHighlights(records, token: token, commentID: body["commentID"] as? String)
                 }
+            case "reviewModeChanged", "reviewCommentDraft", "reviewCommentSubmit", "reviewThreadState", "reviewTaskState", "reviewTaskAtOffset", "reviewTaskApply":
+                model.acceptReviewContextEvent(body)
+            case "privateCommentSubmit":
+                if let token = body["token"] as? String, let id = body["id"] as? String, let text = body["text"] as? String {
+                    model.submitPrivateComment(id, text: text, token: token)
+                }
             case "sharedSelectionAction":
                 if let token = body["token"] as? String, token == model.reviewRenderToken,
                    model.sharedReview.mode == .shared {

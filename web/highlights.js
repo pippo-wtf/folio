@@ -5,7 +5,9 @@ const toolbar=document.createElement('div');toolbar.id='highlight-tools';toolbar
 const save=document.createElement('button');save.type='button';save.textContent='Highlight';save.title='Save highlight (⇧⌘H)';
 const remove=document.createElement('button');remove.type='button';remove.textContent='Remove highlight';
 const comment=document.createElement('button');comment.type='button';comment.textContent='Comment…';
-toolbar.append(save,comment,remove);document.body.append(toolbar);
+const modeToggle=document.createElement('span');modeToggle.className='review-mode-toggle';modeToggle.hidden=true;
+const modeButtons=['private','shared'].map(mode=>{const b=document.createElement('button');b.type='button';b.dataset.reviewMode=mode;b.textContent=mode==='private'?'Private':'Shared';b.addEventListener('pointerdown',e=>e.preventDefault());b.addEventListener('click',()=>{applyIntent(mode);send({type:'reviewModeChanged',token,mode});update();});modeToggle.append(b);return b;});
+toolbar.append(save,comment,remove,modeToggle);document.body.append(toolbar);
 const status=document.createElement('div');status.id='highlight-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.hidden=true;document.body.append(status);
 function announce(text){clearTimeout(timer);status.textContent=text;status.hidden=false;timer=setTimeout(()=>status.hidden=true,6000);}
 function nodes(){
@@ -80,6 +82,7 @@ function sharedAction(comment){
  send({type:'sharedSelectionAction',token,comment});
 }
 function applyIntent(mode){
+ for(const b of modeButtons)b.setAttribute('aria-pressed',String(b.dataset.reviewMode===mode));
  intent=mode;save.textContent=mode==='shared'?'Share highlight':'Highlight';
  save.title=mode==='shared'?'Share highlight (⇧⌘H)':'Save highlight (⇧⌘H)';
  comment.textContent=mode==='shared'?'Shared comment…':'Comment…';
@@ -134,7 +137,9 @@ document.addEventListener('click',event=>{
  const mark=event.target.closest('mark.folio-highlight');
  if(mark&&writable&&!busy&&window.getSelection()?.isCollapsed){
   if(intent==='shared'){toolbar.hidden=true;pending=null;return;}
-  pending={ids:mark.dataset.highlightIds.split(' ')};save.hidden=true;remove.hidden=false;show(mark.getBoundingClientRect());
+  const ids=mark.dataset.highlightIds.split(' '),commented=records.find(record=>ids.includes(record.id)&&record.comment);
+  if(commented){toolbar.hidden=true;pending=null;send({type:'commentHighlight',token,id:commented.id});return;}
+  pending={ids};save.hidden=true;remove.hidden=false;show(mark.getBoundingClientRect());
  }else if(!toolbar.contains(event.target)&&window.getSelection()?.isCollapsed){toolbar.hidden=true;pending=null;}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){toolbar.hidden=true;pending=null;}});
@@ -142,7 +147,7 @@ window.addEventListener('scroll',()=>toolbar.hidden=true,{passive:true});
 window.addEventListener('resize',()=>toolbar.hidden=true);
 export function restoreHighlights(documentToken,saved,canSave){
  root=document.getElementById('document');token=documentToken;records=saved||[];writable=canSave;pending=null;busy=false;toolbar.hidden=true;status.hidden=true;save.disabled=false;remove.disabled=false;comment.disabled=false;
- applyIntent('private');
+ modeToggle.hidden=true;applyIntent('private');
  const missing=paint();if(missing)announce(`${missing} saved highlight${missing===1?' could':'s could'} not be located after the text changed.`);
 }
 export function highlightsSaved(documentToken,saved){
@@ -163,4 +168,16 @@ export function navigateHighlight(id){
  requestAnimationFrame(()=>{
   marks[0].scrollIntoView({behavior:'instant',block:'center'});
  });
+}
+
+export function setReviewAvailability(documentToken,enabled,mode){
+ if(!documentToken||documentToken!==token)return false;
+ modeToggle.hidden=!enabled;if(['private','shared'].includes(mode))applyIntent(enabled?mode:'private');return true;
+}
+export function privateCommentInfo(documentToken,id){
+ if(!documentToken||documentToken!==token||!writable)return null;
+ const record=records.find(r=>r.id===id);if(!record)return null;
+ const marks=()=>[...root.querySelectorAll('mark.folio-highlight')].filter(mark=>mark.dataset.highlightIds.split(' ').includes(id));
+ if(!marks().length)return null;
+ return {quote:record.quote,comment:record.comment||'',reveal:()=>{for(let parent=marks()[0]?.parentElement;parent&&parent!==root;parent=parent.parentElement){if(parent.tagName==='DETAILS')parent.open=true;}marks()[0]?.scrollIntoView({block:'nearest',behavior:'instant'});},rect:()=>marks()[0]?.getBoundingClientRect()||null};
 }

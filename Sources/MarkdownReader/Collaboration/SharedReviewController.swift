@@ -4,7 +4,16 @@ import Foundation
 @MainActor final class SharedReviewController: ObservableObject {
     enum Mode: String, CaseIterable { case privateReview = "Private", shared = "Shared" }
     enum Tab: String, CaseIterable { case open = "Open", done = "Done", activity = "Activity" }
-    @Published var mode: Mode = .privateReview
+    var contextChanged: (() -> Void)?
+    private var contextQueued = false
+    private func contextDidChange() {
+        guard !contextQueued else { return }
+        contextQueued = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }; self.contextQueued = false; self.contextChanged?()
+        }
+    }
+    @Published var mode: Mode = .privateReview { didSet { contextDidChange() } }
     @Published var tab: Tab = .open
     private var drafts: [UUID: (String, UUID?)] = [:]
     @Published var selectedThread: UUID? {
@@ -13,13 +22,14 @@ import Foundation
             if let oldValue { drafts[oldValue] = (comment, replyTo) }
             let saved = selectedThread.flatMap { drafts[$0] }
             comment = saved?.0 ?? ""; replyTo = saved?.1
+            contextDidChange()
         }
     }
-    @Published var replyTo: UUID?
-    @Published var comment = ""
+    @Published var replyTo: UUID? { didSet { contextDidChange() } }
+    @Published var comment = "" { didSet { contextDidChange() } }
     private var pendingCommentID: UUID?
-    @Published var busy = false
-    @Published var issue: String?
+    @Published var busy = false { didSet { contextDidChange() } }
+    @Published var issue: String? { didSet { contextDidChange() } }
     @Published var unread = 0
     @Published var anchorStatuses: [String: String] = [:]
     @Published var showPrivatePreview = false

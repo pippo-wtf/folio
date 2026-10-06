@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 
 extension ReaderModel {
     func refreshSharedReview() {
+        sharedReview.contextChanged = { [weak self] in self?.publishSharedReviewContext() }
         let document = collaboration.currentDocument
         sharedReview.bind(document: document?.documentID, token: reviewRenderToken)
         if let document {
@@ -19,6 +20,88 @@ extension ReaderModel {
         }
         script("setSharedReviewMode", [reviewRenderToken, sharedReview.mode == .shared ? "shared" : "private"])
         script("updateSharedReview", [reviewRenderToken, records])
+        publishSharedReviewContext()
+    }
+    func sharedReviewContext() -> [String: Any] {
+        let document = collaboration.currentDocument
+        let threads: [[String: Any]] = collaboration.state?.annotations.keys.sorted { $0.uuidString < $1.uuidString }.compactMap { id in
+            guard let document, let origin = collaboration.state?.annotations[id], origin.documentID == document.documentID,
+                  let anchor = collaboration.sharedAnchor(highlightID: id) else { return nil }
+            let messages: [[String: Any]] = collaboration.sharedMessages(document: document, threadID: id).compactMap { event in
+                guard case .commentAdded(_, let messageID, let reply, let text) = event.payload else { return nil }
+                return ["id": messageID.uuidString, "author": reviewAuthor(event), "text": text, "replyTo": reply?.uuidString as Any? ?? NSNull()]
+            }
+            return ["id": id.uuidString, "quote": anchor.quote, "author": reviewAuthor(origin), "resolved": collaboration.sharedThreadResolved(threadID: id), "messages": messages]
+        } ?? []
+        let source = snapshot?.text ?? text
+        let tasks: [[String: Any]] = collaboration.state?.tasks.keys.sorted { $0.uuidString < $1.uuidString }.compactMap { id in
+            guard let document, let origin = collaboration.state?.tasks[id], origin.documentID == document.documentID,
+                  case .taskRegistered(_, let anchor) = origin.payload else { return nil }
+            return ["id": id.uuidString, "offset": SharedTaskMatcher.locate(anchor, in: source) as Any? ?? NSNull(), "line": anchor.line,
+                    "states": collaboration.sharedTaskStates(taskID: id).map(\.rawValue), "status": collaboration.sharedTaskSourceStatus(taskID: id, source: source)]
+        } ?? []
+        return ["enabled": document != nil, "mode": sharedReview.mode == .shared ? "shared" : "private", "busy": sharedReview.busy,
+                "issue": sharedReview.issue as Any? ?? NSNull(), "threads": threads, "tasks": tasks,
+                "selectedThread": sharedReview.selectedThread?.uuidString as Any? ?? NSNull(), "draft": sharedReview.comment,
+                "replyTo": sharedReview.replyTo?.uuidString as Any? ?? NSNull()]
+    }
+    private func reviewAuthor(_ event: CollaborationEvent) -> String {
+        "\(event.authorName) · \(String(event.participantID.uuidString.prefix(8)))"
+    }
+    func publishSharedReviewContext() { script("setReviewContext", [reviewRenderToken, sharedReviewContext()]) }
+    private func currentReviewThread(_ id: UUID) -> Bool {
+        guard let document = collaboration.currentDocument, let origin = collaboration.state?.annotations[id] else { return false }
+        return origin.documentID == document.documentID && origin.workspaceID == document.workspaceID && collaboration.sharedAnchor(highlightID: id) != nil
+    }
+    func acceptReviewContextEvent(_ body: [String: Any]) {
+        guard let token = body["token"] as? String, token == reviewRenderToken,
+              let document = collaboration.currentDocument, sharedReview.accepts(document: document.documentID, token: token),
+              let type = body["type"] as? String else { return }
+        if type == "reviewModeChanged" {
+            guard let mode = body["mode"] as? String, ["private", "shared"].contains(mode) else { return }
+            sharedReview.mode = mode == "shared" ? .shared : .privateReview
+            publishSharedReviewContext(); return
+        }
+        guard sharedReview.mode == .shared else { return }
+        if type == "reviewTaskAtOffset" {
+            guard let before = body["before"] as? String, let offset = body["offset"] as? Int,
+                  let raw = body["state"] as? String, let state = SharedTaskState(rawValue: raw) else { return }
+            sharedTaskAtOffset(before: before, offset: offset, state: state, token: token); return
+        }
+        guard let value = body["id"] as? String, let id = UUID(uuidString: value) else { return }
+        if type == "reviewTaskApply" {
+            guard !sharedReview.busy, let origin = collaboration.state?.tasks[id], origin.documentID == document.documentID,
+                  origin.workspaceID == document.workspaceID else { return }
+            applyPendingSharedTask(id); return
+        }
+        if type == "reviewTaskState" {
+            guard let origin = collaboration.state?.tasks[id], origin.documentID == document.documentID,
+                  origin.workspaceID == document.workspaceID, let raw = body["state"] as? String, let state = SharedTaskState(rawValue: raw) else { return }
+            setSharedTask(id, state: state); return
+        }
+        guard currentReviewThread(id) else { return }
+        if type == "reviewThreadState", let resolved = body["resolved"] as? Bool { setSharedThread(id, resolved: resolved); return }
+        guard ["reviewCommentDraft", "reviewCommentSubmit"].contains(type), let text = body["text"] as? String, text.utf8.count <= 400000 else { return }
+        var reply: UUID?
+        if let value = body["replyTo"], !(value is NSNull) {
+            guard let raw = value as? String, let parsed = UUID(uuidString: raw), let event = collaboration.state?.messages[parsed],
+                  event.documentID == document.documentID, event.workspaceID == document.workspaceID,
+                  case .commentAdded(let parentThread, _, _, _) = event.payload, parentThread == id else { return }
+            reply = parsed
+        }
+        sharedReview.selectedThread = id; sharedReview.comment = text; sharedReview.replyTo = reply
+        if type == "reviewCommentSubmit" { submitSharedComment() }
+    }
+    func navigateSharedTask(_ id: UUID) {
+        guard !writing, !loading else { sharedReview.issue = "Switch to Reading to jump to this task."; return }
+        guard let document = collaboration.currentDocument,
+              collaboration.state?.tasks[id]?.documentID == document.documentID else { return }
+        sharedReview.mode = .shared; publishSharedReviewContext()
+        evaluateReview("openReviewTask", arguments: [reviewRenderToken, id.uuidString]) { [weak self] result in
+            if result?["opened"] as? Bool != true {
+                self?.sharedReview.issue = "Task passage changed. Find the checkbox in the document and choose its state there to continue."
+            }
+        }
     }
     private func flatSharedAnchor(id: String, anchor: SharedAnchor) -> [String: Any] {
         ["id": id, "start": anchor.start, "quote": anchor.quote, "prefix": anchor.prefix, "suffix": anchor.suffix, "rawSourceRevision": anchor.rawSourceRevision, "decodedSourceRevision": anchor.decodedSourceRevision]
@@ -28,7 +111,8 @@ extension ReaderModel {
         let id = documentID, token = reviewRenderToken, shared = collaboration.currentDocument
         webView.evaluateJavaScript("Folio.\(method).apply(Folio,\(json))") { [weak self] value, _ in
             guard let self, self.documentID == id, self.reviewRenderToken == token, self.collaboration.currentDocument == shared else { return }
-            completion(value as? [String: Any])
+            if let opened = value as? Bool { completion(["opened": opened]) }
+            else { completion(value as? [String: Any]) }
         }
     }
     func acceptSharedAnchorStatuses(token: String, records: [[String: Any]]) {
@@ -39,10 +123,15 @@ extension ReaderModel {
     }
     func sharedHighlightClicked(id: String, token: String) {
         guard token == reviewRenderToken, let uuid = UUID(uuidString: id), let doc = collaboration.currentDocument, collaboration.state?.annotations[uuid]?.documentID == doc.documentID else { return }
-        sharedReview.mode = .shared; sharedReview.selectedThread = uuid; sharedReview.replyTo = nil
+        sharedReview.mode = .shared; sharedReview.selectedThread = uuid
+        publishSharedReviewContext()
+        script("openReviewThread", [token, uuid.uuidString, false])
     }
     func navigateSharedHighlight(_ id: UUID) {
         guard !writing, !loading else { sharedReview.issue = "Switch to Reading to jump to this passage."; return }
+        guard currentReviewThread(id) else { return }
+        sharedReview.mode = .shared; sharedReview.selectedThread = id; publishSharedReviewContext()
+        script("openReviewThread", [reviewRenderToken, id.uuidString, true])
         evaluateReview("navigateSharedHighlight", arguments: [reviewRenderToken, id.uuidString]) { [weak self] result in
             guard let self else { return }
             if result?["status"] as? String != "located" { self.sharedReview.issue = "Passage changed. Select the correct passage and choose Reattach." }
@@ -85,7 +174,7 @@ extension ReaderModel {
                 else { thread = await self.collaboration.addSharedHighlight(document: document, anchor: anchor) }
                 guard self.documentID == generation, self.reviewRenderToken == token, self.collaboration.currentDocument == document else { return }
                 self.sharedReview.busy = false
-                if let thread { self.sharedReview.selectedThread = thread; self.sharedReview.replyTo = nil; self.sharedReview.issue = nil; self.refreshSharedReview(); if comment { self.sharedReview.mode = .shared } }
+                if let thread { self.sharedReview.selectedThread = thread; self.sharedReview.replyTo = nil; self.sharedReview.issue = nil; self.refreshSharedReview(); if comment { self.sharedReview.mode = .shared; self.publishSharedReviewContext(); self.script("openReviewThread", [token, thread.uuidString, true]) } }
                 else { self.sharedReview.issue = "The shared mark was not saved. Retry or export local evidence." }
             }
         }
@@ -96,7 +185,7 @@ extension ReaderModel {
         script("keepSelectionPrivate", [token, selection])
     }
     func submitSharedComment() {
-        guard let document = collaboration.currentDocument, let thread = sharedReview.selectedThread, !sharedReview.busy else { return }
+        guard let document = collaboration.currentDocument, let thread = sharedReview.selectedThread, currentReviewThread(thread), !sharedReview.busy else { return }
         let draft = sharedReview.comment, reply = sharedReview.replyTo
         guard !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, draft.utf8.count <= 8000 else { sharedReview.issue = "Write a comment of at most 8,000 UTF-8 bytes."; return }
         guard let operation = sharedReview.beginCommentSend() else { return }
@@ -173,8 +262,11 @@ extension ReaderModel {
         }
     }
     func sharedToggleTask(before: String, offset: Int, checked: Bool, token: String) {
+        sharedTaskAtOffset(before: before, offset: offset, state: checked ? .done : .open, token: token)
+    }
+    func sharedTaskAtOffset(before: String, offset: Int, state: SharedTaskState, token: String) {
         guard token == reviewRenderToken, before == text, let document = collaboration.currentDocument, let snapshot, !sharedReview.busy else { return }
-        guard !dirty, text == snapshot.text else { sharedReview.issue = "Save your draft before changing a shared task. No checkbox was changed."; return }
+        guard !dirty, !loading, text == snapshot.text, collaboration.sourceObservations[document.documentID] == snapshot.bytes else { sharedReview.issue = "Save your draft before changing a shared task. No checkbox was changed."; return }
         let existing = collaboration.state?.tasks.compactMap { id, event -> UUID? in
             guard event.documentID == document.documentID, case .taskRegistered(_, let anchor) = event.payload, SharedTaskMatcher.locate(anchor, in: snapshot.text) == offset else { return nil }; return id
         } ?? []
@@ -186,7 +278,7 @@ extension ReaderModel {
             if id == nil, let anchor = SharedTaskMatcher.anchor(atUTF16: offset, in: snapshot.text, rawSourceRevision: CollaborationSnapshotID.hash(snapshot.bytes)) { id = await self.collaboration.registerSharedTask(document: document, anchor: anchor) }
             guard self.documentID == generation, self.reviewRenderToken == token, self.collaboration.currentDocument == document else { return }
             guard let id else { self.sharedReview.busy = false; self.sharedReview.issue = "Task passage changed. No source was changed."; return }
-            self.sharedReview.busy = false; self.setSharedTask(id, state: checked ? .done : .open)
+            self.sharedReview.busy = false; self.setSharedTask(id, state: state)
         }
     }
     func setSharedTask(_ id: UUID, state value: SharedTaskState) {

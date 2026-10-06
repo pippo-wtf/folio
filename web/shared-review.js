@@ -98,6 +98,13 @@ export function createSharedReview(root,token,send){
    const value=anchor(nodes.map(e=>e.node.data).join(''),start,end,'');if(!value)return null;
    const {id,...result}=value;return {token,...result};
   },
+  rect(documentToken,id){
+   if(cancelled||documentToken!==token||deferred())return null;
+   const record=records.find(r=>r.id===id);if(!record)return null;
+   const nodes=entries(),state=locateSharedAnchor(nodes.map(e=>e.node.data).join(''),record);if(state.status!=='located')return null;
+   const first=nodes.find(e=>e.start<=state.start&&e.end>state.start),last=nodes.find(e=>e.start<state.end&&e.end>=state.end);if(!first||!last)return null;
+   const range=doc.createRange();range.setStart(first.node,state.start-first.start);range.setEnd(last.node,state.end-last.start);return range.getBoundingClientRect();
+  },
   navigate(documentToken,id){
    if(cancelled||documentToken!==token)return {status:'stale'};
    if(deferred())return {status:'deferred'};

@@ -198,4 +198,80 @@ final class CollaborationReviewTests: XCTestCase {
         await c.stopWatching()
     }
 
+    @MainActor func testContextDraftRejectsStaleTokenUnknownThreadAndForeignReply() async throws {
+        _ = NSApplication.shared
+        let (c, source, _) = try await fixture()
+        let doc = try XCTUnwrap(c.currentDocument)
+        let raw = CollaborationSnapshotID.hash(try XCTUnwrap(c.sourceObservations[doc.documentID]))
+        let anchor = SharedAnchor(start: 0, quote: "Quote", prefix: "", suffix: "", rawSourceRevision: raw, decodedSourceRevision: raw)
+        let created = await c.addSharedHighlight(document: doc, anchor: anchor)
+        let id = try XCTUnwrap(created)
+        let otherValue = await c.addSharedHighlight(document: doc, anchor: anchor)
+        let other = try XCTUnwrap(otherValue)
+        _ = await c.addSharedMessage(document: doc, threadID: other, replyTo: nil, text: "Another discussion")
+        let otherMessage = try XCTUnwrap(c.sharedMessages(document: doc, threadID: other).first)
+        guard case .commentAdded(_, let foreignReply, _, _) = otherMessage.payload else { return XCTFail("Missing comment") }
+        let model = ReaderModel(collaboration: c); model.refreshSharedReview(); model.sharedReview.mode = .shared
+        func draft(_ token: String, _ thread: UUID, _ reply: UUID? = nil) {
+            var body: [String: Any] = ["type": "reviewCommentDraft", "token": token, "id": thread.uuidString, "text": "Retained draft"]
+            if let reply { body["replyTo"] = reply.uuidString }
+            model.acceptReviewContextEvent(body)
+        }
+        draft("stale", id); XCTAssertNil(model.sharedReview.selectedThread)
+        draft(model.reviewRenderToken, UUID()); XCTAssertNil(model.sharedReview.selectedThread)
+        draft(model.reviewRenderToken, id, UUID()); XCTAssertNil(model.sharedReview.selectedThread)
+        draft(model.reviewRenderToken, id, foreignReply); XCTAssertNil(model.sharedReview.selectedThread)
+        model.sharedReview.mode = .privateReview
+        draft(model.reviewRenderToken, id); XCTAssertNil(model.sharedReview.selectedThread)
+        model.sharedReview.mode = .shared
+        draft(model.reviewRenderToken, id)
+        XCTAssertEqual(model.sharedReview.comment, "Retained draft")
+        model.sharedReview.selectedThread = nil
+        model.sharedHighlightClicked(id: id.uuidString, token: model.reviewRenderToken)
+        XCTAssertEqual(model.sharedReview.comment, "Retained draft")
+        let context = model.sharedReviewContext()
+        XCTAssertEqual(context["draft"] as? String, "Retained draft")
+        let threads = try XCTUnwrap(context["threads"] as? [[String: Any]])
+        XCTAssertEqual(threads.count, 2)
+        XCTAssertTrue((threads[0]["author"] as? String)?.contains(String(c.profile!.participantID.uuidString.prefix(8))) == true)
+        XCTAssertTrue(c.sharedMessages(document: doc, threadID: id).isEmpty)
+        let nextSource = source.deletingLastPathComponent().appendingPathComponent("other.md")
+        try Data("Another document".utf8).write(to: nextSource)
+        await c.registerDocument(relativePath: "other.md"); c.selectDocument(url: nextSource)
+        model.refreshSharedReview(); model.sharedReview.mode = .shared
+        draft(model.reviewRenderToken, id)
+        XCTAssertNil(model.sharedReview.selectedThread, "An existing thread from another document must not receive a draft")
+        XCTAssertEqual((model.sharedReviewContext()["threads"] as? [[String: Any]])?.count, 0)
+        await c.stopWatching()
+    }
+
+    @MainActor func testContextTaskRecoveryReportsFailedJumpAndValidatesApply() async throws {
+        _ = NSApplication.shared
+        let (c, source, _) = try await fixture()
+        let doc = try XCTUnwrap(c.currentDocument)
+        let bytes = try XCTUnwrap(c.sourceObservations[doc.documentID])
+        let text = String(decoding: bytes, as: UTF8.self)
+        let offset = try XCTUnwrap((text as NSString).range(of: "[ ]").location == NSNotFound ? nil : (text as NSString).range(of: "[ ]").location + 1)
+        let anchor = try XCTUnwrap(SharedTaskMatcher.anchor(atUTF16: offset, in: text, rawSourceRevision: CollaborationSnapshotID.hash(bytes)))
+        let created = await c.registerSharedTask(document: doc, anchor: anchor)
+        let id = try XCTUnwrap(created)
+        _ = await c.setSharedTask(document: doc, taskID: id, state: .done)
+        let model = ReaderModel(collaboration: c); model.recoveryStartupReady = true; model.load(source)
+        for _ in 0..<200 where model.loading { try await Task.sleep(for: .milliseconds(10)) }
+        let (view, _) = try await CollaborationRendererTests().web(model: model)
+        defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
+        _ = try await view.evaluateJavaScript("Folio.openReviewTask=()=>false; void 0")
+        model.navigateSharedTask(id)
+        for _ in 0..<100 where model.sharedReview.issue == nil { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertTrue(model.sharedReview.issue?.contains("Task passage changed") == true)
+        model.sharedReview.issue = nil
+        model.acceptReviewContextEvent(["type": "reviewTaskApply", "token": "stale", "id": id.uuidString])
+        XCTAssertNil(model.sharedReview.issue)
+        model.acceptReviewContextEvent(["type": "reviewTaskApply", "token": model.reviewRenderToken, "id": UUID().uuidString])
+        XCTAssertNil(model.sharedReview.issue)
+        model.acceptReviewContextEvent(["type": "reviewTaskApply", "token": model.reviewRenderToken, "id": id.uuidString])
+        XCTAssertTrue(model.sharedReview.issue?.contains("Markdown update pending") == true)
+        await c.stopWatching()
+    }
+
 }
