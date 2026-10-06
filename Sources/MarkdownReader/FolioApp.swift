@@ -40,8 +40,8 @@ struct FolioApp: App {
                 Button("Redo") { model.redoEdit() }.keyboardShortcut("z", modifiers: [.command, .shift])
             }
             CommandGroup(replacing: .saveItem) {
-                Button("Save") { model.save() }.keyboardShortcut("s")
-                Button("Save As…") { model.save(asCopy: true) }.keyboardShortcut("s", modifiers: [.command, .shift])
+                Button("Save") { model.saveCommand() }.keyboardShortcut("s")
+                Button("Save As…") { model.saveCommand(asCopy: true) }.keyboardShortcut("s", modifiers: [.command, .shift])
             }
             CommandGroup(replacing: .printItem) {
                 Button("Export PDF…") { model.exportPDF() }.keyboardShortcut("e", modifiers: [.command, .shift]).disabled(model.preparingPrint || model.loading)
@@ -102,8 +102,17 @@ struct FolioApp: App {
             DispatchQueue.main.async { ReaderWindowPresenter.shared.request() }
         }
     }
+    var readerModel: ReaderModel = ReaderModel.shared
+    var terminationReply: (NSApplication, Bool) -> Void = { app, success in app.reply(toApplicationShouldTerminate: success) }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        let allowed = ReaderModel.shared.confirmLeave()
+        let model = readerModel
+        var waiting = false
+        let allowed = model.confirmLeave(continuation: {
+            DispatchQueue.main.async { if waiting { self.terminationReply(sender, true) } }
+        }, cancellation: {
+            DispatchQueue.main.async { if waiting { self.terminationReply(sender, false) } }
+        })
+        if model.leaveSavePending { waiting = true; return .terminateLater }
         LaunchTrace.record("shouldTerminate allowed=\(allowed)")
         return allowed ? .terminateNow : .terminateCancel
     }

@@ -21,9 +21,9 @@ struct SharedFolderSheet: View {
                 Spacer()
                 Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
             }
-            Text("Your name labels your contributions. Folio does not verify your identity.")
+            Text("Your name identifies your contributions; it is not a verified login.")
             TextField("Your name", text: $name).textFieldStyle(.roundedBorder)
-            Text("Use 1–100 UTF-8 bytes, with no control characters. Folio creates stable participant and device IDs locally. Shared contributions include both IDs.")
+            Text("Use a short name without special control characters.")
                 .font(.caption).foregroundStyle(ink.opacity(0.7))
             Text("Review data is shared with everyone who has access to this OneDrive folder.")
             Text("Choosing a folder does not invite people or change its permissions. Existing private highlights and edit history stay private.")
@@ -65,7 +65,7 @@ struct SharedFolderSheet: View {
                         ForEach(coordinator.candidates, id: \.self) { Text($0).tag($0) }
                     }
                     HStack {
-                        Button(reconnectID == nil ? "Register new document identity" : "Reconnect selected identity") {
+                        Button(reconnectID == nil ? "Share document" : "Reconnect document") {
                             let path = candidate, id = reconnectID
                             Task {
                                 if let id { await coordinator.reconnectDocument(id: id, relativePath: path) }
@@ -76,7 +76,9 @@ struct SharedFolderSheet: View {
                         if reconnectID != nil { Button("Cancel reconnect") { reconnectID = nil } }
                     }
                 }
-                Text("At most 8 registered documents. Shared source saving is disabled until guarded recovery is ready.")
+                Toggle("Enable guarded source saves for this disposable pilot", isOn: $coordinator.sourceSavingEnabled)
+                    .disabled(coordinator.sourceAccessUnverified || coordinator.busy)
+                Text("At most 8 registered documents. This Staging pilot retains source versions locally before saving. Two-Mac recovery acceptance is still required.")
                     .font(.caption).foregroundStyle(ink.opacity(0.7))
                 HStack {
                     Button("Retry") { Task { await coordinator.refresh() } }

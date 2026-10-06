@@ -80,6 +80,14 @@ struct ReaderView: View {
                     .preferredColorScheme(isDark ? .dark : .light).presentationBackground(paperColor)
             }
         }
+        .sheet(isPresented: $collaboration.showSourceConflictSheet) {
+            if BuildChannel.collaborationAvailable {
+                SharedSourceConflictSheet(coordinator: collaboration, model: model, paper: paperColor, ink: inkColor, accent: accentColor)
+                    .preferredColorScheme(isDark ? .dark : .light).presentationBackground(paperColor)
+            }
+        }
+        .onChange(of: collaboration.state) { _, _ in model.refreshSharedReview() }
+        .onChange(of: collaboration.currentDocument) { _, _ in model.refreshSharedReview() }
         .task { await collaboration.restore() }
         .onAppear {
             let action = openWindow
@@ -110,6 +118,12 @@ struct ReaderView: View {
                         }
                         if let error = collaboration.error { Text(error).font(.caption).foregroundStyle(.secondary) }
                     }
+                }
+            }
+            if BuildChannel.collaborationAvailable && collaboration.currentDocument != nil {
+                Section("Shared review") {
+                    SharedReviewSidebar(model: model, paper: paperColor, ink: inkColor, accent: accentColor)
+                    Button("Compare source versions…") { model.compareSharedSource() }
                 }
             }
             Section("Contents") {
@@ -276,7 +290,7 @@ struct ReaderView: View {
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 12) {
                         Button("Retry") { model.reload() }
-                        if model.dirty { Button("Save As…") { model.save(asCopy: true) } }
+                        if model.dirty { Button("Save As…") { model.saveCommand(asCopy: true) } }
                         Button("Dismiss") { model.error = nil }
                     }
                     .font(.callout)
@@ -401,7 +415,7 @@ struct ReaderView: View {
             Toggle(isOn: $model.writing) {
                 Label("Source", systemImage: "chevron.left.forwardslash.chevron.right")
             }.toggleStyle(.button).help("Show Markdown source").disabled(model.loading || model.preparingPrint)
-            Button { model.save() } label: { Label("Save", systemImage: "square.and.arrow.down").labelStyle(.iconOnly) }
+            Button { model.saveCommand() } label: { Label("Save", systemImage: "square.and.arrow.down").labelStyle(.iconOnly) }
                 .help("Save document (⌘S)").accessibilityLabel("Save")
                 .disabled(model.loading || (!model.dirty && model.fileURL != nil))
 

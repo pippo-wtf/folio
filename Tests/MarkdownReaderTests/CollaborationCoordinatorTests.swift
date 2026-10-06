@@ -244,4 +244,68 @@ final class CollaborationCoordinatorTests: XCTestCase {
         XCTAssertEqual(model.text, "External solo change.\n")
     }
 
+    @MainActor func testVerifiedUniqueRenameUpdatesBothBindingsAndCanOpenSelectSave() async throws {
+        let (_, shared, local) = try fixture()
+        let c = CollaborationCoordinator(enabled: true, localRoot: local)
+        await c.join(folder: shared, create: true, displayName: "Philip")
+        await c.registerDocument(relativePath: "first.md")
+        let id = try XCTUnwrap(c.documents.first?.id), workspace = try XCTUnwrap(c.workspaceID)
+        let moved = shared.appendingPathComponent("moved.md")
+        try FileManager.default.moveItem(at: shared.appendingPathComponent("first.md"), to: moved)
+        await c.refresh()
+        XCTAssertEqual(c.documents.first?.reference.relativePath, "moved.md")
+        XCTAssertTrue(c.candidates.contains("moved.md")); XCTAssertFalse(c.candidates.contains("first.md"))
+        let opened = await c.openDocument(id: id)
+        XCTAssertEqual(opened?.resolvingSymlinksInPath(), moved.resolvingSymlinksInPath())
+        c.selectDocument(url: opened)
+        let document = try XCTUnwrap(c.currentDocument)
+        XCTAssertEqual(document.relativePath, "moved.md")
+        let replica = CollaborationReplicaStore(localRoot: local.appendingPathComponent("workspaces/\(workspace.uuidString)"), sharedRoot: shared, workspaceID: workspace)
+        XCTAssertEqual(try replica.document(id: id), document)
+        c.sourceSavingEnabled = true
+        let saved = try await c.save(document: document, baseline: DocumentSnapshot(url: moved), draft: "Renamed and saved.\n")
+        XCTAssertEqual(saved.localApply, .applied)
+        XCTAssertEqual(try String(contentsOf: moved), "Renamed and saved.\n")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: shared.appendingPathComponent("first.md").path))
+        await c.stopWatching()
+    }
+    @MainActor func testMissingOriginalKeepsReviewAndOffersFreshExplicitReconnectCandidates() async throws {
+        let (_, shared, local) = try fixture()
+        let c = CollaborationCoordinator(enabled: true, localRoot: local)
+        await c.join(folder: shared, create: true, displayName: "Philip")
+        await c.registerDocument(relativePath: "first.md")
+        let id = try XCTUnwrap(c.documents.first?.id), previousState = c.state
+        let copy = shared.appendingPathComponent("same-content-copy.md")
+        try Data("# First\n".utf8).write(to: copy)
+        try FileManager.default.removeItem(at: shared.appendingPathComponent("first.md"))
+        await c.refresh()
+        XCTAssertEqual(c.status, .needsReconnection); XCTAssertEqual(c.state, previousState)
+        XCTAssertTrue(c.candidates.contains("same-content-copy.md")); XCTAssertFalse(c.candidates.contains("first.md"))
+        XCTAssertEqual(c.documents.first?.reference.relativePath, "first.md"); XCTAssertNil(c.documents.first?.url)
+        let guessed = await c.openDocument(id: id); XCTAssertNil(guessed)
+        await c.reconnectDocument(id: id, relativePath: "same-content-copy.md")
+        let reconnected = await c.openDocument(id: id)
+        XCTAssertEqual(reconnected?.resolvingSymlinksInPath(), copy.resolvingSymlinksInPath())
+        c.selectDocument(url: reconnected)
+        XCTAssertEqual(c.currentDocument?.documentID, id)
+        await c.stopWatching()
+    }
+
+    @MainActor func testOverlappingRefreshCallersWaitForAppliedSnapshot() async throws {
+        let (_, shared, local) = try fixture()
+        let c = CollaborationCoordinator(enabled: true, localRoot: local)
+        await c.join(folder: shared, create: true, displayName: "Philip")
+        await c.registerDocument(relativePath: "first.md")
+        let first = Task { @MainActor in
+            await c.refresh()
+            XCTAssertFalse(c.busy, "Awaited refresh must finish the requested scan before returning")
+        }
+        let second = Task { @MainActor in
+            await c.refresh()
+            XCTAssertFalse(c.busy, "Overlapping awaited refresh must not return before the rescan is applied")
+        }
+        await first.value; await second.value
+        await c.stopWatching()
+    }
+
 }

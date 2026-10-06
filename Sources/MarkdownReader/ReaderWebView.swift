@@ -96,7 +96,9 @@ struct ReaderWebView: NSViewRepresentable {
             case "toggleTask":
                 if let before = body["before"] as? String, let token = body["token"] as? String,
                    let offset = body["offset"] as? Int, let checked = body["checked"] as? Bool {
-                    model.toggleTask(before: before, offset: offset, checked: checked, token: token)
+                    if model.sharedReview.mode == .shared && model.collaboration.currentDocument != nil {
+                        model.sharedToggleTask(before: before, offset: offset, checked: checked, token: token)
+                    } else { model.toggleTask(before: before, offset: offset, checked: checked, token: token) }
                 }
             case "editDocument":
                 if let before = body["before"] as? String, let updated = body["text"] as? String, let token = body["token"] as? String {
@@ -127,6 +129,19 @@ struct ReaderWebView: NSViewRepresentable {
                    let data = try? JSONSerialization.data(withJSONObject: array), data.count <= 2_000_000,
                    let records = try? JSONDecoder().decode([SavedHighlight].self, from: data) {
                     model.saveHighlights(records, token: token, commentID: body["commentID"] as? String)
+                }
+            case "sharedSelectionAction":
+                if let token = body["token"] as? String, token == model.reviewRenderToken,
+                   model.sharedReview.mode == .shared {
+                    model.shareSelectedText(comment: body["comment"] as? Bool ?? false)
+                }
+            case "sharedHighlightClicked":
+                if let token = body["token"] as? String, let id = body["id"] as? String {
+                    model.sharedHighlightClicked(id: id, token: token)
+                }
+            case "sharedReviewAnchors":
+                if let token = body["token"] as? String, let records = body["records"] as? [[String: Any]], records.count <= 2000 {
+                    model.acceptSharedAnchorStatuses(token: token, records: records)
                 }
             case "commentHighlight":
                 if let token = body["token"] as? String, let id = body["id"] as? String {
