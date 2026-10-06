@@ -51,13 +51,22 @@ extension ReaderModel {
     func shareSelectedText(comment: Bool = false, reattach: UUID? = nil) {
         guard let document = collaboration.currentDocument, !sharedReview.busy, !loading, !writing, let snapshot else { sharedReview.issue = "Open a registered document in Reading and select a passage."; return }
         guard !dirty, text == snapshot.text, collaboration.sourceObservations[document.documentID] == snapshot.bytes else {
-            let alert = NSAlert(); alert.messageText = "Save this passage before sharing?"
-            alert.informativeText = "Shared marks refer to a saved revision. Save first, then select the passage again; or keep a private mark."
-            alert.addButton(withTitle: "Save first"); alert.addButton(withTitle: "Keep private"); alert.addButton(withTitle: "Cancel")
-            switch alert.runModal() {
-            case .alertFirstButtonReturn: requestSharedSave { [weak self] success in if success { self?.sharedReview.issue = "Saved. Select the passage again to share it." } }
-            case .alertSecondButtonReturn: keepSelectedTextPrivate()
-            default: break
+            let capturedText = text, capturedToken = reviewRenderToken
+            // Capture before the native modal takes focus and can discard the DOM range.
+            evaluateReview("sharedSelection", arguments: [capturedToken]) { [weak self] selection in
+                guard let self, let selection, selection["token"] as? String == capturedToken,
+                      self.text == capturedText else { self?.sharedReview.issue = "Select a passage in Reading, then try again."; return }
+                let alert = NSAlert(); alert.messageText = "Save this passage before sharing?"
+                alert.informativeText = "Shared marks refer to a saved revision. Save first, then select the passage again; or keep a private mark."
+                alert.addButton(withTitle: "Save first"); alert.addButton(withTitle: "Keep private"); alert.addButton(withTitle: "Cancel")
+                let response = alert.runModal()
+                guard self.reviewRenderToken == capturedToken, self.collaboration.currentDocument == document,
+                      self.text == capturedText else { self.sharedReview.issue = "The passage changed. Select it again."; return }
+                switch response {
+                case .alertFirstButtonReturn: self.requestSharedSave { [weak self] success in if success { self?.sharedReview.issue = "Saved. Select the passage again to share it." } }
+                case .alertSecondButtonReturn: self.keepSelectedTextPrivate(selection, token: capturedToken)
+                default: break
+                }
             }
             return
         }
@@ -81,10 +90,10 @@ extension ReaderModel {
             }
         }
     }
-    func keepSelectedTextPrivate() {
+    func keepSelectedTextPrivate(_ selection: [String: Any], token: String) {
+        guard token == reviewRenderToken, selection["token"] as? String == token else { return }
         sharedReview.mode = .privateReview
-        script("setSharedReviewMode", [reviewRenderToken, "private"])
-        script("highlightSelection", [])
+        script("keepSelectionPrivate", [token, selection])
     }
     func submitSharedComment() {
         guard let document = collaboration.currentDocument, let thread = sharedReview.selectedThread, !sharedReview.busy else { return }

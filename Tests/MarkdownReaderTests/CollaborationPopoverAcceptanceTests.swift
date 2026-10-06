@@ -44,7 +44,12 @@ final class CollaborationPopoverAcceptanceTests: XCTestCase {
         model.sharedReview.mode = .shared; model.render()
         _ = try await view.evaluateJavaScript("void 0")
         try await selectHeading(view)
-        model.keepSelectedTextPrivate()
+        let rawSelection = try await view.evaluateJavaScript("Folio.sharedSelection('\(model.reviewRenderToken)')")
+        let captured = try XCTUnwrap(rawSelection as? [String: Any])
+        // Native focus/modal interaction can discard the live DOM range.
+        _ = try await view.evaluateJavaScript("getSelection().removeAllRanges(); void 0")
+        try await Task.sleep(for: .milliseconds(50))
+        model.keepSelectedTextPrivate(captured, token: model.reviewRenderToken)
         _ = try await view.evaluateJavaScript("void 0")
         XCTAssertEqual(model.sharedReview.mode, .privateReview)
         XCTAssertFalse(bridge.messages.contains { $0["type"] as? String == "sharedSelectionAction" })
@@ -64,6 +69,23 @@ final class CollaborationPopoverAcceptanceTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: source), original)
         XCTAssertEqual(c.state?.annotations.count, 0)
         await c.stopWatching()
+    }
+
+    @MainActor func testCapturedPrivateFallbackRejectsStaleTokenAndChangedPassage() async throws {
+        let (view, bridge) = try await CollaborationRendererTests().web()
+        defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
+        _ = try await view.evaluateJavaScript("Folio.render('# Quote','','current',[],true,null,false); Folio.setSharedReviewMode('current','shared'); void 0")
+        try await selectHeading(view)
+        _ = try await view.evaluateJavaScript("window.captured=Folio.sharedSelection('current'); getSelection().removeAllRanges(); void 0")
+        let stale = try await view.evaluateJavaScript("Folio.keepSelectionPrivate('old',captured)")
+        XCTAssertEqual(stale as? Bool, false)
+        _ = try await view.evaluateJavaScript("document.querySelector('#document h1').textContent='Changed'; void 0")
+        let changed = try await view.evaluateJavaScript("Folio.keepSelectionPrivate('current',captured)")
+        XCTAssertEqual(changed as? Bool, false)
+        _ = try await view.evaluateJavaScript("Folio.render('# Quote','','next',[],true,null,false); void 0")
+        let rerendered = try await view.evaluateJavaScript("Folio.keepSelectionPrivate('current',captured)")
+        XCTAssertEqual(rerendered as? Bool, false)
+        XCTAssertFalse(bridge.messages.contains { $0["type"] as? String == "saveHighlights" || $0["type"] as? String == "sharedSelectionAction" })
     }
 
     // Removing pointerdown cancellation or clearing the range before native async capture

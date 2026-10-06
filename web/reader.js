@@ -1,7 +1,7 @@
 import {setupEditing} from './editing.js';
 import {parse} from './parser.js';
 import {applyLayout} from './layout.js';
-import {restoreHighlights,highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,setSharedReviewMode} from './highlights.js';
+import {restoreHighlights,highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,setSharedReviewMode,keepSelectionPrivate} from './highlights.js';
 import {renderDiagrams} from './diagrams.js';
 import {createSharedReview} from './shared-review.js';
 let editorController=null,sharedReview=null;
@@ -9,7 +9,7 @@ let codes=[],renderVersion=0,positionToken='',positionTimer;
 let restoring=false,diagramWork=Promise.resolve();
 const send=message=>window.webkit?.messageHandlers.folio.postMessage(message);
 window.Folio={
- highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,setSharedReviewMode,
+ highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,setSharedReviewMode,keepSelectionPrivate,
  updateSharedReview(token,records){
   if(!sharedReview||!token||token!==positionToken)return {accepted:false,token,painting:'stale',records:[]};
   return sharedReview.update(token,records);

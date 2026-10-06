@@ -1,15 +1,17 @@
 # Folio Staging collaboration acceptance
 
-Status: implementation and independent slice/final reviews complete; all final automated checks passed; Developer ID signed preview built and installed locally. A bounded installed-app walkthrough and local two-participant test are recorded below; full visual and two-Mac acceptance remain incomplete.
+Latest results: see [comprehensive local acceptance](COMPREHENSIVE-LOCAL.md), which supersedes historical counts and failures below. Build 0604 passes 214 native tests per channel and 57 JavaScript tests; actual private fallback and sidebar fixes verified. Remote provider acceptance remains incomplete.
 
-## Evidence boundaries
+Historical status: implementation and independent slice/final reviews complete; all final automated checks passed; Developer ID signed preview built and installed locally. A bounded installed-app walkthrough and local two-participant test are recorded below; full visual and two-Mac acceptance remain incomplete.
+
+## Original acceptance plan and historical evidence
 
 - Basic OneDrive delivery in both directions previously verified with a disposable Markdown file.
 - Reviewed schema-1 CLI simulation: 28 tests. This is not app integration proof.
 - New schema-2 integration, actual Staging permission/bookmark behavior, provider fault cases and simultaneous saves: NOT RUN.
 - Public Folio, release feeds and Homebrew are outside this implementation scope.
 
-## Actual-app checks
+## Original two-Mac acceptance matrix (not a record of latest local checks)
 
 Use a fresh disposable child of the already shared MD-Sharing folder. Preserve existing documents. Philip creates the workspace once; Christian joins the same workspace after OneDrive delivery. Record identical Staging build/digest on both Macs.
 

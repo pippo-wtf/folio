@@ -91,7 +91,16 @@ export function setSharedReviewMode(documentToken,mode){
 }
 export function highlightSelection(){
  if(intent==='shared'){sharedAction(false);return;}
- const range=selection()||pending;
+ savePrivateRange(selection()||pending);
+}
+export function keepSelectionPrivate(documentToken,captured){
+ if(!documentToken||documentToken!==token||captured?.token!==token)return false;
+ const text=contents(),range=anchor(text,captured.start,captured.start+captured.quote?.length,'');
+ if(!range||range.quote!==captured.quote||range.prefix!==captured.prefix||range.suffix!==captured.suffix)return false;
+ applyIntent('private');pending=null;toolbar.hidden=true;
+ savePrivateRange({start:captured.start,end:captured.start+captured.quote.length});return true;
+}
+function savePrivateRange(range){
  if(!range){announce('Select some text first, then choose Highlight.');return;}
  if(!writable){announce('Highlights are unavailable until this document is reopened.');return;}
  const text=contents(),merged=unionSelection(range,records.filter(r=>!r.comment).map(r=>locate(text,r)).filter(Boolean));

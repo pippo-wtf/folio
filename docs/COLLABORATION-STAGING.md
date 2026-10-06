@@ -4,7 +4,7 @@ This preview is for disposable test documents. The public Folio app is unchanged
 
 ## Start together
 
-1. Both people use Folio Staging **0.14.0 (2026100602)**. The signed local archive is `dist/Folio-Staging-0.14.0-2026100602.zip`; this pilot build has not been notarized. In OneDrive, create a new disposable subfolder inside your existing shared folder and add a Markdown test document. Make the folder available offline.
+1. Both people use Folio Staging **0.14.0 (2026100604)**. The signed local archive is `dist/Folio-Staging-0.14.0-2026100604.zip`; this pilot build has not been notarized. In OneDrive, create a new disposable subfolder inside your existing shared folder and add a Markdown test document. Make the folder available offline.
 2. In Folio Staging, open the sidebar and choose **Add shared folder…**. Enter your name. One person chooses **Create once** and selects the new folder.
 3. After OneDrive delivers the new review folder, the other person chooses **Join existing** and selects their local copy of the same folder. Choosing a folder in Folio does not invite anyone or change OneDrive permissions.
 4. The creator chooses the test document and **Share document**. The other person opens it from the shared document list after delivery. The preview supports up to eight shared documents.
@@ -32,3 +32,5 @@ If a task's passage becomes ambiguous or disappears, its shared history stays av
 Follow [the acceptance ledger](experiments/2026-10-06-staging-collaboration/ACCEPTANCE.md) on both actual Macs. In particular, verify comments/tasks arriving both ways, private marks staying private, offline/restart recovery, and recovery of both competing saved versions. Unit and native WebKit tests do not establish real OneDrive behavior or visual acceptance.
 
 For this session, `Folio-Staging-Pilot-20261006` and its disposable `fixture.md` are already prepared inside the shared MD-Sharing folder. Select that child folder when creating/joining.
+
+Latest bounded local checks and remaining limits: [comprehensive local acceptance](experiments/2026-10-06-staging-collaboration/COMPREHENSIVE-LOCAL.md). Both 214-test native suites and 57 JavaScript tests pass; real two-Mac delivery remains unverified.
