@@ -1,14 +1,22 @@
 import {setupEditing} from './editing.js';
 import {parse} from './parser.js';
 import {applyLayout} from './layout.js';
-import {restoreHighlights,highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight} from './highlights.js';
+import {restoreHighlights,highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,setSharedReviewMode} from './highlights.js';
 import {renderDiagrams} from './diagrams.js';
-let editorController=null;
+import {createSharedReview} from './shared-review.js';
+let editorController=null,sharedReview=null;
 let codes=[],renderVersion=0,positionToken='',positionTimer;
 let restoring=false,diagramWork=Promise.resolve();
 const send=message=>window.webkit?.messageHandlers.folio.postMessage(message);
 window.Folio={
- highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,
+ highlightSelection,highlightsSaved,highlightSaveFailed,navigateHighlight,setSharedReviewMode,
+ updateSharedReview(token,records){
+  if(!sharedReview||!token||token!==positionToken)return {accepted:false,token,painting:'stale',records:[]};
+  return sharedReview.update(token,records);
+ },
+ locateSharedReview(token,records){return sharedReview?.preview(token,records)||{accepted:false,token,records:[],reason:'stale'};},
+ navigateSharedHighlight(token,id){return sharedReview?.navigate(token,id)||{status:'stale'};},
+ sharedSelection(token){return sharedReview?.selection(token)||null;},
  requestContent(requestID){if(!editorController)throw new Error('The editor is not ready');editorController.requestContent(requestID);},
  focusTask(offset){document.querySelector(`input[data-task-offset="${Number(offset)}"]`)?.focus({preventScroll:true});},
  updateCode(index,text){if(Number.isInteger(index)&&index>=0&&index<codes.length)codes[index]=text;},
@@ -66,11 +74,13 @@ window.Folio={
    const selection=getSelection(),range=document.createRange();range.selectNodeContents(previousHost);
    if(previousHost.contains(selection.focusNode)){range.setEnd(selection.focusNode,selection.focusOffset);caret={id:previousHost.dataset.edit,offset:range.toString().length};}
   }
+  sharedReview?.cleanup();sharedReview=null;
   editorController?.cleanup();
   document.getElementById('document').innerHTML=result.html;
   document.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false;}));
   editorController=setupEditing(markdown,result.blocks,result.complexBlocks,assetPrefix,highlightToken,editing,send);
   restoreHighlights(highlightToken,highlights,canSaveHighlights);
+  sharedReview=createSharedReview(document.getElementById('document'),highlightToken,send);
   if(caret&&editing){
    const host=document.getElementById('document');
    if(host){host.focus({preventScroll:true});const walker=document.createTreeWalker(host,NodeFilter.SHOW_TEXT);let node,last,offset=caret.offset;
