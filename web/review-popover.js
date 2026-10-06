@@ -69,6 +69,16 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
   if(id&&task?.states?.length===1){const apply=button('Apply status to Markdown',()=>{if(!writable())return;if(context.mode!=='shared')send({type:'reviewModeChanged',token,mode:'shared'});send({type:'reviewTaskApply',token,id});close();});apply.dataset.reviewApply='';apply.disabled=!writable();panel.append(apply);}
   errorText(context.issue);panel.hidden=false;position();return true;
  }
+ function reconcileTaskBoxes(){
+  if(!context.enabled)return;
+  for(const box of root.querySelectorAll('input[data-task-offset]')){
+   box.disabled=!!context.busy;
+   if(context.busy)continue;
+   const matches=context.tasks.filter(task=>task.offset===Number(box.dataset.taskOffset));
+   const states=matches.length===1?matches[0].states:[];
+   box.checked=states?.length===1?states[0]==='done':box.defaultChecked;
+  }
+ }
  function accessories(){
   layer.replaceChildren();
   for(const box of root.querySelectorAll('input[data-task-offset]')){const offset=Number(box.dataset.taskOffset),task=context.tasks.find(t=>t.offset===offset),states=task?.states||[];
@@ -84,7 +94,7 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
  return {
   update(t,value){if(!valid(t)||!value||typeof value!=='object')return false;
    const oldShape=JSON.stringify([context.threads,context.busy,context.issue]);
-   context={...value,threads:Array.isArray(value.threads)?value.threads:[],tasks:Array.isArray(value.tasks)?value.tasks:[]};accessories();
+   context={...value,threads:Array.isArray(value.threads)?value.threads:[],tasks:Array.isArray(value.tasks)?value.tasks:[]};reconcileTaskBoxes();accessories();
    const pending=submissions.get(context.selectedThread);let acknowledged=false;
    if(pending){
     if(context.busy)pending.sawBusy=true;

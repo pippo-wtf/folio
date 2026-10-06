@@ -4,6 +4,32 @@ import WebKit
 @testable import MarkdownReader
 
 final class ContextualReviewRendererTests: XCTestCase {
+    @MainActor func testSharedCheckboxCanCheckUncheckAndCheckWithoutSourceRerender() async throws {
+        let (view, bridge) = try await CollaborationRendererTests().web()
+        defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
+        _ = try await view.evaluateJavaScript("Folio.render('- [ ] Task','','current',[],true,null,false);window.box=document.querySelector('input[data-task-offset]');window.offset=Number(box.dataset.taskOffset);Folio.setReviewContext('current',{enabled:true,mode:'private',busy:false,threads:[],tasks:[]});void 0")
+        for checked in [true, false, true] {
+            _ = try await view.evaluateJavaScript("box.click();Folio.setReviewContext('current',{enabled:true,mode:'private',busy:true,threads:[],tasks:[]});void 0")
+            let locked = try await view.evaluateJavaScript("box.disabled") as? Bool
+            XCTAssertEqual(locked, true)
+            _ = try await view.evaluateJavaScript("Folio.setReviewContext('current',{enabled:true,mode:'private',busy:false,threads:[],tasks:[{id:'task',offset,states:['\(checked ? "done" : "open")'],doneBy:'Alex'}]});void 0")
+            let result = try await view.evaluateJavaScript("({checked:box.checked,disabled:box.disabled})") as! [String: Any]
+            XCTAssertEqual(result["disabled"] as? Bool, false)
+            XCTAssertEqual(result["checked"] as? Bool, checked)
+        }
+        XCTAssertEqual(bridge.messages.filter { $0["type"] as? String == "toggleTask" }.compactMap { $0["checked"] as? Bool }, [true, false, true])
+    }
+    @MainActor func testRejectedCheckboxChangeRestoresSourceAndAllowsRetry() async throws {
+        let (view, _) = try await CollaborationRendererTests().web()
+        defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
+        _ = try await view.evaluateJavaScript("Folio.render('- [ ] Task','','current',[],true,null,false);window.box=document.querySelector('input[data-task-offset]');box.click();Folio.setReviewContext('current',{enabled:true,busy:false,issue:'Save your draft first',tasks:[]});void 0")
+        let state = try await view.evaluateJavaScript("({checked:box.checked,disabled:box.disabled})") as! [String: Any]
+        XCTAssertEqual(state["checked"] as? Bool, false)
+        XCTAssertEqual(state["disabled"] as? Bool, false)
+        _ = try await view.evaluateJavaScript("box.click();Folio.setReviewContext('stale',{enabled:true,busy:false,tasks:[]});void 0")
+        let locked = try await view.evaluateJavaScript("box.disabled") as? Bool
+        XCTAssertEqual(locked, true, "An old document must not acknowledge the current operation")
+    }
     @MainActor func testLongDiscussionScrollsWithoutScrollbarAndKeepsTextSendButton() async throws {
         let harness = CollaborationRendererTests(); let (view, _) = try await harness.web()
         defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }

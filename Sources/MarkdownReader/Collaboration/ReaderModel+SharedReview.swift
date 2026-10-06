@@ -294,7 +294,6 @@ extension ReaderModel {
             let trigger = await self.collaboration.setSharedTask(document: document, taskID: id, state: value)
             guard self.documentID == generation, self.collaboration.currentDocument == document else { return }
             guard let trigger else { self.sharedReview.busy = false; self.sharedReview.issue = "Task status was not saved. Retry."; return }
-            self.sharedReview.busy = false
             self.applySharedTask(id, trigger: trigger, value: value)
         }
     }
@@ -305,14 +304,16 @@ extension ReaderModel {
         applySharedTask(id, trigger: event.id, value: value)
     }
     private func applySharedTask(_ id: UUID, trigger: UUID, value: SharedTaskState) {
-        guard let document = collaboration.currentDocument, let baseline = snapshot, collaboration.sourceSavingEnabled, !dirty, !sharedSaveBusy else { sharedReview.issue = "Task status saved · Markdown update pending. Save your draft and enable the disposable source pilot to apply it."; return }
+        guard let document = collaboration.currentDocument, let baseline = snapshot, collaboration.sourceSavingEnabled, !dirty, !sharedSaveBusy else { sharedReview.busy = false; sharedReview.issue = "Task status saved · Markdown update pending. Save your draft and enable the disposable source pilot to apply it."; return }
         let generation = documentID
+        sharedReview.busy = true
         requestContentSnapshot { [weak self] source in
-            guard let self, let source, self.documentID == generation, !self.dirty, source == baseline.text,
+            guard let self, self.documentID == generation, self.collaboration.currentDocument == document else { return }
+            guard let source, !self.dirty, source == baseline.text,
                   self.collaboration.currentDocument == document, self.collaboration.sourceObservations[document.documentID] == baseline.bytes,
                   self.collaboration.state?.taskHeads[id] == [trigger],
                   let origin = self.collaboration.state?.tasks[id], case .taskRegistered(_, let anchor) = origin.payload,
-                  let offset = SharedTaskMatcher.locate(anchor, in: source), let proposed = TaskListEdit.setChecked(value == .done, atUTF16: offset, in: source) else { self?.sharedReview.issue = "Task status saved · Markdown update pending. Review the changed passage before applying."; return }
+                  let offset = SharedTaskMatcher.locate(anchor, in: source), let proposed = TaskListEdit.setChecked(value == .done, atUTF16: offset, in: source) else { self.sharedReview.busy = false; self.sharedReview.issue = "Task status saved · Markdown update pending. Review the changed passage before applying."; return }
             self.sharedReview.busy = true
             Task { @MainActor [weak self] in
                 guard let self else { return }
