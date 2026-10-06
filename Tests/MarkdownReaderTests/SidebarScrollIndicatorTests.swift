@@ -75,7 +75,12 @@ import AppKit
         XCTAssertNotNil(indicator.hitTest(parentHit), "Scrolling stays visible before the 700ms idle delay")
         try await Task.sleep(for: .milliseconds(200))
         XCTAssertNotNil(indicator.hitTest(parentHit), "Normal motion fades rather than disappearing at 700ms")
-        try await Task.sleep(for: .milliseconds(300))
+        // Timer ticks run on the main run loop and may be delayed/coalesced under CI load.
+        // Keep the pre-idle and in-fade checks above, but await actual completion within a bound.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+        while indicator.hitTest(parentHit) != nil && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
         XCTAssertTrue(try pixels(indicator).isEmpty)
         XCTAssertNil(indicator.hitTest(parentHit), "An invisible scrollbar must not intercept clicks")
     }
