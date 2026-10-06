@@ -175,6 +175,43 @@ final class CopyContentTests: XCTestCase {
         XCTAssertEqual(editor.selectedRange().location, 3)
         XCTAssertTrue(editor.undoManager?.canUndo ?? false)
     }
+    @MainActor func testRepresentableUpdateSynchronizesNormalizationOnlyModelChange() {
+        let composed = "Caf\u{e9}"
+        let decomposed = "Cafe\u{301}"
+        let (model, editor) = source(composed) { _ in true }
+        model.text = composed
+        let coordinator = MarkdownEditor.Coordinator(model); coordinator.wasWriting = true
+        let scroll = NSScrollView(); scroll.documentView = editor
+        model.text = decomposed
+        MarkdownEditor(model: model).updateEditor(scroll, coordinator: coordinator)
+        XCTAssertEqual(Data(editor.string.utf8), Data(decomposed.utf8))
+    }
+    @MainActor func testRepresentableUpdateKeepsPendingNormalizationChangeAndUndo() {
+        let composed = "Caf\u{e9}"
+        let decomposed = "Cafe\u{301}"
+        let (model, editor) = source(composed) { _ in true }
+        model.text = composed
+        let coordinator = MarkdownEditor.Coordinator(model); coordinator.wasWriting = true
+        let scroll = NSScrollView(); scroll.documentView = editor
+        editor.string = decomposed
+        editor.undoManager?.registerUndo(withTarget: editor) { $0.string = composed }
+        model.text = "unrelated model update"
+        MarkdownEditor(model: model).updateEditor(scroll, coordinator: coordinator)
+        XCTAssertEqual(Data(editor.string.utf8), Data(decomposed.utf8))
+        XCTAssertTrue(editor.undoManager?.canUndo ?? false)
+    }
+    @MainActor func testWKWebViewRejectsNormalizationOnlyStaleSnapshot() async throws {
+        var copied = [String]()
+        let (model, view, _) = try await web("Caf\u{e9}", editing: false) { copied.append($0); return true }
+        defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
+        let packet: [String: String] = ["type": "contentReady", "token": model.reviewRenderToken, "text": "Cafe\u{301}"]
+        let json = String(data: try JSONEncoder().encode(packet), encoding: .utf8)!
+        _ = try await view.evaluateJavaScript("window.Folio.requestContent=id=>{const packet=\(json);packet.requestID=id;window.webkit.messageHandlers.folio.postMessage(packet)};void 0")
+        model.copyContent(); try await waitForCopy(model)
+        XCTAssertTrue(copied.isEmpty)
+        XCTAssertFalse(model.contentCopied)
+        XCTAssertNotNil(model.error)
+    }
     @MainActor func testEnteringSourceSynchronizesHiddenEditor() {
         let (model, editor) = source("hidden old") { _ in true }
         let coordinator = MarkdownEditor.Coordinator(model)

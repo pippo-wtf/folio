@@ -21,6 +21,7 @@ struct SidebarScrollIndicator: NSViewRepresentable {
 
     @MainActor final class IndicatorView: NSView {
         var indicatorWidth: CGFloat = 3 { didSet { needsDisplay = true } }
+        var reduceMotion = { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
         private weak var scrollView: NSScrollView?
         private var hideWork: DispatchWorkItem?
         private var fadeTimer: Timer?
@@ -32,7 +33,7 @@ struct SidebarScrollIndicator: NSViewRepresentable {
 
         override var isFlipped: Bool { true }
         override func hitTest(_ point: NSPoint) -> NSView? {
-            guard let superview, let thumb = thumbRect() else { return nil }
+            guard thumbOpacity > 0, let superview, let thumb = thumbRect() else { return nil }
             let local = convert(point, from: superview)
             return thumb.insetBy(dx: -5, dy: -4).contains(local) ? self : nil
         }
@@ -132,7 +133,7 @@ struct SidebarScrollIndicator: NSViewRepresentable {
             guard !draggingThumb else { return }
             let work = DispatchWorkItem { [weak self] in
                 guard let self else { return }
-                if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+                if self.reduceMotion() {
                     self.thumbOpacity = 0
                     return
                 }

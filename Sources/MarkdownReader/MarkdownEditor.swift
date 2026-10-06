@@ -25,9 +25,9 @@ struct MarkdownEditor: NSViewRepresentable {
     // Use the same path for representable updates and regression coverage.
     func updateEditor(_ scroll: NSScrollView, coordinator: Coordinator) {
         guard let view = scroll.documentView as? NSTextView else { return }
-        if model.writing && view.string != model.text && !view.hasMarkedText(),
+        if model.writing && !view.string.utf8.elementsEqual(model.text.utf8) && !view.hasMarkedText(),
            !coordinator.wasWriting || coordinator.documentID != model.documentID ||
-           (model.text != coordinator.lastModelText && view.string == coordinator.lastModelText) {
+           (!model.text.utf8.elementsEqual(coordinator.lastModelText.utf8) && view.string.utf8.elementsEqual(coordinator.lastModelText.utf8)) {
             view.string = model.text; view.undoManager?.removeAllActions()
         }
         coordinator.lastModelText = model.text; coordinator.documentID = model.documentID

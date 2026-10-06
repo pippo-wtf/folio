@@ -107,9 +107,10 @@ public struct EditJournalStore {
         guard journal.headRevision == nil || journal.headRevision == beforeHash else {
             throw JournalError.revisionMismatch
         }
-        guard before != after || kind == .save else { return nil }
+        // Swift String equality ignores Unicode normalization differences; revisions do not.
+        guard beforeHash != afterHash || kind == .save else { return nil }
         // Repeated saves of the same source do not grow an unbounded marker trail.
-        if kind == .save, before == after, let last = journal.events.last,
+        if kind == .save, beforeHash == afterHash, let last = journal.events.last,
            last.kind == .save, last.afterRevision == afterHash { return last }
 
         var events = journal.events

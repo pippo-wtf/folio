@@ -258,7 +258,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         journalTask?.cancel(); journalTask = nil
         guard let key = journalKey else { return true }
         guard !journalBlocked, let before = journaledText else { return false }
-        guard before != text else { pendingJournalKind = nil; pendingJournalPassage = nil; return true }
+        guard !before.utf8.elementsEqual(text.utf8) else { pendingJournalKind = nil; pendingJournalPassage = nil; return true }
         let kind = pendingJournalKind ?? (writing ? .sourceEdit : .renderedEdit)
         let passage = pendingJournalPassage
         do {
@@ -280,7 +280,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         } catch { journalFailure(error) }
     }
     func sourceEditorDidChange(_ updated: String) {
-        guard writing, !loading, !sourceHistoryOperation, updated != text else { return }
+        guard writing, !loading, !sourceHistoryOperation, !updated.utf8.elementsEqual(text.utf8) else { return }
         text = updated
         queueJournal(.sourceEdit)
     }
@@ -341,7 +341,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             pageEditTime = .distantPast
             if writing { editingEnabled = true; flushEditJournal(); sourceEntry = text }
             else {
-                if let before = sourceEntry, before != text { pageUndo.append(before); trimPageHistory(); pageRedo = [] }
+                if let before = sourceEntry, !before.utf8.elementsEqual(text.utf8) { pageUndo.append(before); trimPageHistory(); pageRedo = [] }
                 flushEditJournal()
                 sourceEntry = nil; render()
             }
@@ -350,7 +350,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     @Published var baseline = ""
     @Published var documentID = UUID() { didSet { cancelCopyContent(); clearPageHistory() } }
     var snapshot: DocumentSnapshot?
-    var dirty: Bool { text != baseline }
+    var dirty: Bool { !text.utf8.elementsEqual(baseline.utf8) }
     weak var editor: NSTextView? { didSet { if oldValue !== editor { cancelCopyContent() } } }
     func confirmLeave(continuation: (() -> Void)? = nil, cancellation: (() -> Void)? = nil) -> Bool {
         guard !sharedSaveBusy else { return false }
@@ -459,11 +459,11 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                         saved = try await self.collaboration.savePrivateCopy(bytes: bytes, to: url, register: register); target = url
                     }
                     guard self.documentID == id, self.saveGeneration == token, self.fileURL == originalURL else { self.finishSharedSave(false); return }
-                    if saved.text == source && target == originalURL { self.snapshot = saved; self.baseline = source }
+                    if saved.text.utf8.elementsEqual(source.utf8) && target == originalURL { self.snapshot = saved; self.baseline = source }
                     self.requestContentSnapshot { [weak self] current in
                         guard let self, self.documentID == id, self.saveGeneration == token, self.fileURL == originalURL else { self?.finishSharedSave(false); return }
-                        guard current != nil else { self.finishSharedSave(false); return }
-                        guard current == source, saved.text == source else { self.error = "The saved version is retained, and your newer draft is still here. Save again before leaving."; self.finishSharedSave(false); return }
+                        guard let current else { self.finishSharedSave(false); return }
+                        guard current.utf8.elementsEqual(source.utf8), saved.text.utf8.elementsEqual(source.utf8) else { self.error = "The saved version is retained, and your newer draft is still here. Save again before leaving."; self.finishSharedSave(false); return }
                         if target != originalURL {
                             if self.fileScope { self.fileURL?.stopAccessingSecurityScopedResource() }
                             self.fileURL = target; self.fileScope = target.startAccessingSecurityScopedResource(); self.assetHandler.document = target
@@ -514,7 +514,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                     try await self.collaboration.retainSource(document: document, baseline: base.bytes, draft: base.encoded(source), observed: incoming.bytes)
                     guard self.documentID == id else { return }
                     self.requestContentSnapshot { [weak self] current in
-                        guard let self, self.documentID == id, current == source, !self.dirty else { return }
+                        guard let self, let current, self.documentID == id, current.utf8.elementsEqual(source.utf8), !self.dirty else { return }
                         self.recordJournalTransition(from: source, to: incoming.text, kind: journalKind)
                         self.snapshot = incoming; self.text = incoming.text; self.baseline = incoming.text; self.documentID = UUID(); self.render()
                         if expectedBytes != nil && self.error?.hasPrefix("The shared source changed. Author unknown.") == true { self.error = nil }
@@ -577,7 +577,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             }
             guard let url = fileURL else { return false }
             let savedSnapshot = try DocumentSnapshot(url: url)
-            guard savedSnapshot.text == text else { throw SaveError.conflict }
+            guard savedSnapshot.text.utf8.elementsEqual(text.utf8) else { throw SaveError.conflict }
             snapshot = savedSnapshot; baseline = text
             editor?.breakUndoCoalescing(); rememberDocument(url); flushRecovery()
             title = url.deletingPathExtension().lastPathComponent; error = nil
@@ -774,7 +774,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         do {
             try editJournal.clear(for: key)
             beginJournalTracking(previousText)
-            if previousText != text {
+            if !previousText.utf8.elementsEqual(text.utf8) {
                 pendingJournalKind = previousKind
                 if flushEditJournal() { error = nil }
             } else if !journalBlocked { error = nil }
@@ -917,13 +917,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                     if content.bytes != snapshot?.bytes { self.error = SaveError.conflict.localizedDescription }
                     loading = false; recordRevision(); return
                 }
-                if content.text != text {
-                    _ = flushEditJournal()
-                    let previous = text
-                    recordJournalTransition(from: previous, to: content.text, kind: .externalReload)
-                }
-                snapshot = content
-                if content.text != text { text = content.text; baseline = text; documentID = UUID(); render() }
+                applyExternalSnapshot(content)
                 if !journalBlocked { error = nil }
                 loading = false; recordRevision()
             } catch {
@@ -933,6 +927,16 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
                 lastErrorCode = "document_refresh_failed"
             }
         }
+    }
+    /// Applies an observed snapshot after reload has checked generation and unsaved edits.
+    func applyExternalSnapshot(_ content: DocumentSnapshot) {
+        if !content.text.utf8.elementsEqual(text.utf8) {
+            _ = flushEditJournal()
+            let previous = text
+            recordJournalTransition(from: previous, to: content.text, kind: .externalReload)
+        }
+        snapshot = content
+        if !content.text.utf8.elementsEqual(text.utf8) { text = content.text; baseline = text; documentID = UUID(); render() }
     }
     func script(_ method: String, _ arguments: [Any]) {
         guard ready, let data = try? JSONSerialization.data(withJSONObject: arguments), let json = String(data: data, encoding: .utf8) else { return }
@@ -964,7 +968,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             editor?.undoManager?.undo()
             sourceHistoryOperation = false
             let after = editor?.string ?? text
-            if after != before { text = after; recordJournalTransition(from: before, to: after, kind: .undo) }
+            if !after.utf8.elementsEqual(before.utf8) { text = after; recordJournalTransition(from: before, to: after, kind: .undo) }
             return
         }
         guard !loading, let previous = pageUndo.popLast() else { return }
@@ -985,7 +989,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             editor?.undoManager?.redo()
             sourceHistoryOperation = false
             let after = editor?.string ?? text
-            if after != before { text = after; recordJournalTransition(from: before, to: after, kind: .redo) }
+            if !after.utf8.elementsEqual(before.utf8) { text = after; recordJournalTransition(from: before, to: after, kind: .redo) }
             return
         }
         guard !loading, let next = pageRedo.popLast() else { return }
@@ -1001,7 +1005,7 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
             sharedToggleTask(before: before, offset: offset, checked: checked, token: token)
             return
         }
-        guard before == text, let updated = TaskListEdit.setChecked(checked, atUTF16: offset, in: text) else {
+        guard before.utf8.elementsEqual(text.utf8), let updated = TaskListEdit.setChecked(checked, atUTF16: offset, in: text) else {
             error = "The task changed before it could be checked. Please try again."
             render(); return
         }
@@ -1016,11 +1020,11 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
     }
     func acceptRenderedEdit(before: String, text updated: String, token: String, passage: String) {
         guard token == highlightToken, !loading, !writing, editingEnabled else { return }
-        guard before == text, updated.utf8.count <= DocumentReader.maximumBytes else {
+        guard before.utf8.elementsEqual(text.utf8), updated.utf8.count <= DocumentReader.maximumBytes else {
             error = "The page changed before this edit could be applied. Your current draft has been kept. Please retry."
             render(); return
         }
-        if updated != text {
+        if !updated.utf8.elementsEqual(text.utf8) {
             if pendingJournalKind != nil &&
                (pendingJournalKind != .renderedEdit || pendingJournalPassage != passage) {
                 _ = flushEditJournal()
@@ -1141,13 +1145,13 @@ struct Heading: Identifiable, Decodable { let id: String; let title: String; let
         guard let request = currentContentRequest(requestID), request.sourceMode,
               editor === view, request.editorID == ObjectIdentifier(view), !view.hasMarkedText() else { return }
         sourceEditorDidChange(view.string)
-        guard text == view.string else { cancelCopyContent(message: "The source editor couldn’t synchronize. Try Copy content again."); return }
+        guard text.utf8.elementsEqual(view.string.utf8) else { cancelCopyContent(message: "The source editor couldn’t synchronize. Try Copy content again."); return }
         finishContent(view.string, requestID: requestID)
     }
     func acceptContentSnapshot(requestID: String, token: String, text snapshot: String) {
         guard let id = UUID(uuidString: requestID), let request = currentContentRequest(id),
               !request.sourceMode, token == request.token else { return }
-        guard snapshot == text else { cancelCopyContent(message: "The editor couldn’t synchronize the current content. Try Copy content again."); return }
+        guard snapshot.utf8.elementsEqual(text.utf8) else { cancelCopyContent(message: "The editor couldn’t synchronize the current content. Try Copy content again."); return }
         finishContent(snapshot, requestID: id)
     }
     func rejectContentSnapshot(requestID: String, token: String, message: String) {

@@ -22,6 +22,29 @@ final class EditJournalStoreTests: XCTestCase {
         XCTAssertEqual(try store.load(for: "doc").events, [event])
     }
 
+    func testCanonicallyEquivalentUnicodeChangesRetainExactBytesAndIdentity() throws {
+        let (root, store) = fixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let before = "# Caf\u{e9}\r\n"
+        let after = "# Cafe\u{301}\r\n"
+        let id = UUID()
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        let event = try XCTUnwrap(store.record(for: "doc", from: before, to: after,
+            kind: .sourceEdit, id: id, date: date))
+        XCTAssertEqual(event.id, id)
+        XCTAssertEqual(event.date, date)
+        XCTAssertEqual(event.updatedAt, date)
+        XCTAssertNotEqual(event.beforeRevision, event.afterRevision)
+        XCTAssertEqual(event.replacement?.offsetUTF8, 5)
+        XCTAssertEqual(Array(try XCTUnwrap(event.replacement).oldText.utf8), [0xc3, 0xa9])
+        XCTAssertEqual(Array(try XCTUnwrap(event.replacement).newText.utf8), [0x65, 0xcc, 0x81])
+        let reopened = EditJournalStore(directory: root)
+        let persisted = try XCTUnwrap(reopened.load(for: "doc").events.first)
+        XCTAssertEqual(Array(try EditJournalStore.replay(persisted, on: before).utf8), Array(after.utf8))
+        XCTAssertEqual(Array(try EditJournalStore.replay(persisted, on: after, reversing: true).utf8), Array(before.utf8))
+        XCTAssertNotNil(try reopened.record(for: "doc", from: after, to: after + "!", kind: .sourceEdit))
+    }
+
     func testInsertionDeletionUndoRedoAndSaveCheckpoint() throws {
         let (root, store) = fixture()
         defer { try? FileManager.default.removeItem(at: root) }
