@@ -55,6 +55,7 @@ import AppKit
     func testLongSidebarUsesCustomThumbAndFadesWithoutInvisibleHitTarget() async throws {
         let (window, scrollView, indicator, source) = fixture()
         defer { withExtendedLifetime(source) {}; indicator.disconnect(); window.close() }
+        indicator.reduceMotion = { false } // Pin the normal-motion branch independently of the host preference.
         XCTAssertTrue(scrollView.verticalScroller is SidebarScrollIndicator.HiddenScroller)
         XCTAssertFalse(scrollView.hasHorizontalScroller)
         XCTAssertTrue(try pixels(indicator).isEmpty)
