@@ -29,10 +29,8 @@ struct SharedFolderSheet: View {
             Text("Choosing a folder does not invite people or change its permissions. Existing private highlights and edit history stay private.")
                 .font(.caption).foregroundStyle(ink.opacity(0.7))
             if coordinator.workspaceID == nil {
-                Picker("Workspace", selection: $create) {
-                    Text("Join existing").tag(false)
-                    Text("Create once").tag(true)
-                }.pickerStyle(.segmented)
+                ReviewTabs(label: "Workspace", selection: $create,
+                           options: [(false, "Join existing"), (true, "Create once")], ink: ink, accent: accent)
                 Text(create ? "Choose a disposable pilot folder. Folio adds metadata only when ‘Folio Review’ is absent." : "Join after OneDrive delivers ‘Folio Review/workspace.json’ from the creator.")
                     .font(.caption)
                 Button("Choose OneDrive folder…") { chooseFolder(reconnect: false) }
@@ -96,7 +94,7 @@ struct SharedFolderSheet: View {
         }
         .padding(24).frame(width: 560)
         .font(.custom(model.layout.bodyFont, size: 14))
-        .foregroundStyle(ink).background(paper).tint(accent)
+        .foregroundStyle(ink).background(paper).tint(accent).buttonStyle(.plain)
         .onAppear { name = coordinator.profile?.displayName ?? "" }
     }
     private func chooseFolder(reconnect: Bool) {

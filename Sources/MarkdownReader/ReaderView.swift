@@ -108,13 +108,13 @@ struct ReaderView: View {
         List(selection: $sidebarSelection) {
             if BuildChannel.collaborationAvailable {
                 Section("Shared folder") {
-                    Button(collaboration.workspaceID == nil ? "Add shared folder…" : "Manage shared folder…") { collaboration.showFolderSheet = true }
+                    Button(collaboration.workspaceID == nil ? "Add shared folder…" : "Manage shared folder…") { collaboration.showFolderSheet = true }.buttonStyle(.plain)
                     if collaboration.workspaceID != nil {
                         Text(collaboration.statusMessage).font(.caption).foregroundStyle(accentColor)
                         ForEach(collaboration.documents) { doc in
                             Button(doc.reference.relativePath) {
                                 Task { let generation = model.documentID; if let url = await collaboration.openDocument(id: doc.id), model.documentID == generation { model.load(url) } }
-                            }.disabled(doc.url == nil || collaboration.busy)
+                            }.buttonStyle(.plain).disabled(doc.url == nil || collaboration.busy)
                         }
                         if let error = collaboration.error { Text(error).font(.caption).foregroundStyle(.secondary) }
                     }
@@ -123,7 +123,7 @@ struct ReaderView: View {
             if BuildChannel.collaborationAvailable && collaboration.currentDocument != nil {
                 Section("Shared review") {
                     SharedReviewSidebar(model: model, paper: paperColor, ink: inkColor, accent: accentColor)
-                    Button("Compare source versions…") { model.compareSharedSource() }
+                    Button("Compare source versions…") { model.compareSharedSource() }.buttonStyle(.plain)
                 }
             }
             Section("Contents") {
@@ -500,7 +500,7 @@ struct ReaderView: View {
                 Text("Copied").font(.callout).foregroundStyle(accentColor)
                     .accessibilityLabel("Copied")
             }
-            Button("Copy content") { model.copyContent() }
+            Button("Copy content") { model.copyContent() }.buttonStyle(.plain)
                 .help("Copy the complete current Markdown source")
                 .disabled(model.loading || model.preparingPrint || model.copyContentBusy)
         }

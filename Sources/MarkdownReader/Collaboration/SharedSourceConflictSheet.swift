@@ -67,7 +67,7 @@ struct SharedSourceConflictSheet: View {
             }
             if let issue { Text(issue).font(.caption) }
         }.padding(24).frame(width: 680).font(.custom(model.layout.bodyFont, size: 14))
-            .foregroundStyle(ink).background(paper).tint(accent)
+            .foregroundStyle(ink).background(paper).tint(accent).buttonStyle(.plain)
     }
     private func decode(_ data: Data) -> String {
         if data.starts(with: [0xff, 0xfe]) || data.starts(with: [0xfe, 0xff]) { return String(data: data, encoding: .utf16) ?? "Exact bytes available in export." }

@@ -13,9 +13,8 @@ struct SharedReviewSidebar: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Picker("Review privacy", selection: $review.mode) {
-                ForEach(SharedReviewController.Mode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }.pickerStyle(.segmented).labelsHidden().accessibilityLabel("Highlight and comment privacy")
+            ReviewTabs(label: "Highlight and comment privacy", selection: $review.mode,
+                       options: SharedReviewController.Mode.allCases.map { ($0, $0.rawValue) }, ink: ink, accent: accent)
             Text(review.mode == .shared ? "New marks are shared with this folder." : "New marks stay private on this Mac.")
                 .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if review.mode == .shared {
@@ -26,9 +25,8 @@ struct SharedReviewSidebar: View {
             }
             Button("Share private marks…") { model.previewPrivateSharing() }
                 .font(.system(size: 11)).buttonStyle(.borderless).disabled(model.marked.isEmpty || review.busy)
-            Picker("Shared review view", selection: $review.tab) {
-                ForEach(SharedReviewController.Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }.pickerStyle(.segmented).labelsHidden()
+            ReviewTabs(label: "Shared review view", selection: $review.tab,
+                       options: SharedReviewController.Tab.allCases.map { ($0, $0.rawValue) }, ink: ink, accent: accent)
             if let document = collaboration.currentDocument {
                 if review.tab == .activity { activity(document) }
                 else { work(document) }
@@ -109,7 +107,7 @@ struct SharedReviewSidebar: View {
                     Button("Open") { model.setSharedTask(id, state: .open) }
                     Button("In progress") { model.setSharedTask(id, state: .inProgress) }
                     Button("Done") { model.setSharedTask(id, state: .done) }
-                }.font(.system(size: 11)).disabled(review.busy)
+                }.font(.system(size: 11)).menuStyle(.borderlessButton).disabled(review.busy)
             }.padding(.vertical, 5)
         }
     }
@@ -174,6 +172,6 @@ struct SharedReviewSidebar: View {
             }.frame(maxHeight: 300)
             if let issue = review.issue { Text(issue).font(.caption).foregroundStyle(.secondary) }
             HStack { Spacer(); Button("Cancel") { review.showPrivatePreview = false }.disabled(review.busy); Button("Share selected") { model.sharePreviewedPrivateMarks() }.disabled(review.previewSelected.isEmpty || review.busy) }
-        }.padding(24).frame(width: 470).background(paper).foregroundStyle(ink).tint(accent)
+        }.padding(24).frame(width: 470).buttonStyle(.plain).background(paper).foregroundStyle(ink).tint(accent)
     }
 }
