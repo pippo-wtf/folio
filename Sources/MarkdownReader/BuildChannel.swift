@@ -1,7 +1,7 @@
 import Foundation
 
 enum BuildChannel {
-    #if FOLIO_STAGING && !FOLIO_UPDATE_TEST
+    #if !FOLIO_UPDATE_TEST
     static let collaborationAvailable = true
     #else
     static let collaborationAvailable = false

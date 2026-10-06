@@ -1,9 +1,67 @@
 import XCTest
 import AppKit
+import SwiftUI
 import ReaderCore
 @testable import MarkdownReader
 
 final class CollaborationCoordinatorTests: XCTestCase {
+    @MainActor func testNameOnboardingRendersInBothAppearances() async throws {
+        let (_, _, local) = try fixture()
+        let coordinator = CollaborationCoordinator(enabled: true, localRoot: local)
+        await coordinator.prepareIdentity()
+        for dark in [false, true] {
+            let view = NameOnboarding(coordinator: coordinator, headingFont: "Oswald",
+                paper: dark ? Color(red: 0.18, green: 0.21, blue: 0.23) : .white,
+                ink: dark ? Color(red: 0.82, green: 0.78, blue: 0.65) : .black)
+                .environment(\.colorScheme, dark ? .dark : .light)
+            let host = NSHostingView(rootView: view)
+            host.frame = NSRect(origin: .zero, size: host.fittingSize)
+            let window = NSWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            window.contentView = host
+            window.orderFront(nil)
+            try await Task.sleep(for: .milliseconds(150))
+            host.layoutSubtreeIfNeeded()
+            let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            let png = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+            try png.write(to: URL(fileURLWithPath: "/private/tmp/folio-name-" + (dark ? "dark" : "light") + ".png"))
+            XCTAssertGreaterThan(bitmap.pixelsWide, 300)
+            XCTAssertGreaterThan(bitmap.pixelsHigh, 200)
+            window.close()
+        }
+    }
+    @MainActor func testNameOnboardingPersistsBeforeJoiningAndSkipsReturningParticipant() async throws {
+        let (_, _, local) = try fixture()
+        let first = CollaborationCoordinator(enabled: true, localRoot: local)
+        await first.prepareIdentity()
+        XCTAssertTrue(first.showNameOnboarding)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: local.path))
+        await first.saveOnboardingName("   ")
+        XCTAssertTrue(first.showNameOnboarding)
+        XCTAssertNil(first.profile)
+        await first.saveOnboardingName("  Philip  ")
+        XCTAssertFalse(first.showNameOnboarding)
+        XCTAssertEqual(first.profile?.displayName, "Philip")
+        XCTAssertNil(first.workspaceID)
+        XCTAssertFalse(first.isWatching)
+        let returning = CollaborationCoordinator(enabled: true, localRoot: local)
+        await returning.prepareIdentity()
+        XCTAssertFalse(returning.showNameOnboarding)
+        XCTAssertEqual(returning.profile, first.profile)
+    }
+    @MainActor func testNameOnboardingDoesNotReplaceCorruptIdentity() async throws {
+        let (_, _, local) = try fixture()
+        try FileManager.default.createDirectory(at: local, withIntermediateDirectories: true)
+        let path = local.appendingPathComponent("profile.json"), bytes = Data("broken".utf8)
+        try bytes.write(to: path)
+        let coordinator = CollaborationCoordinator(enabled: true, localRoot: local)
+        await coordinator.prepareIdentity()
+        await coordinator.saveOnboardingName("Philip")
+        XCTAssertTrue(coordinator.showNameOnboarding)
+        XCTAssertNotNil(coordinator.onboardingError)
+        XCTAssertEqual(try Data(contentsOf: path), bytes)
+    }
     func fixture() throws -> (URL, URL, URL) {
         let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let shared = base.appendingPathComponent("shared"), local = base.appendingPathComponent("local")
@@ -16,11 +74,14 @@ final class CollaborationCoordinatorTests: XCTestCase {
     @MainActor func testPublicDisabledHasNoDiskOrWatcherSideEffects() async throws {
         let (_, shared, local) = try fixture()
         let c = CollaborationCoordinator(enabled: false, localRoot: local)
+        await c.prepareIdentity()
+        await c.saveOnboardingName("Philip")
+        XCTAssertFalse(c.showNameOnboarding)
         await c.join(folder: shared, create: true, displayName: "Philip")
         XCTAssertNil(c.workspaceID); XCTAssertFalse(c.isWatching)
         XCTAssertFalse(FileManager.default.fileExists(atPath: local.path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: shared.appendingPathComponent("Folio Review").path))
-        #if FOLIO_STAGING && !FOLIO_UPDATE_TEST
+        #if !FOLIO_UPDATE_TEST
         XCTAssertTrue(BuildChannel.collaborationAvailable)
         #else
         XCTAssertFalse(BuildChannel.collaborationAvailable)

@@ -394,6 +394,9 @@ private final class CollaborationWorkspaceWorker: @unchecked Sendable {
     @Published private(set) var busy = false
     @Published private(set) var isWatching = false
     @Published private(set) var sourceAccessUnverified: Bool
+    @Published var showNameOnboarding = false
+    @Published private(set) var onboardingError: String?
+    private var identityPrepared = false
     @Published var showFolderSheet = false
     @Published var sourceSavingEnabled = false
     @Published private(set) var lastSourceSave: SharedSaveOutcome?
@@ -430,6 +433,43 @@ private final class CollaborationWorkspaceWorker: @unchecked Sendable {
     }
     private func begin() { operations += 1; busy = true }
     private func end() { operations -= 1; busy = operations > 0 }
+    func prepareIdentity() async {
+        guard enabled, !identityPrepared else { return }
+        identityPrepared = true
+        begin(); defer { end() }
+        do {
+            let saved = try await run { worker in
+                let value = try worker.identityStore.load()
+                worker.profile = value
+                return value
+            }
+            profile = saved
+            showNameOnboarding = saved == nil
+        } catch {
+            showNameOnboarding = true
+            onboardingError = "Your saved name could not be read. Your existing identity has been kept."
+        }
+    }
+    func saveOnboardingName(_ name: String) async {
+        guard enabled, !busy else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard CollaborationIO.validName(trimmed) else {
+            onboardingError = "Please enter a short name using ordinary letters and spaces."
+            return
+        }
+        begin(); defer { end() }
+        do {
+            profile = try await run { worker in
+                let value = try worker.identityStore.loadOrCreate(displayName: trimmed)
+                worker.profile = value
+                return value
+            }
+            onboardingError = nil
+            showNameOnboarding = false
+        } catch {
+            onboardingError = "Your name could not be saved. Please try again; your existing identity has been kept."
+        }
+    }
     func restore() async {
         guard enabled, workspaceID == nil, !busy else { return }
         // No absent active record means no workspace and no watcher/store creation.
@@ -565,7 +605,7 @@ private final class CollaborationWorkspaceWorker: @unchecked Sendable {
     }
     var destinationChangingSaveBlocked: Bool { enabled && sourceAccessUnverified }
     func save(document: SharedDocumentRef, baseline: DocumentSnapshot, draft: String, triggerEventID: UUID? = nil) async throws -> SharedSaveOutcome {
-        guard enabled, sourceSavingEnabled, !sourceAccessUnverified, workspaceID == document.workspaceID else { throw CollaborationError.invalid("Shared source saving is disabled. Enable the disposable Staging pilot to save this source.") }
+        guard enabled, sourceSavingEnabled, !sourceAccessUnverified, workspaceID == document.workspaceID else { throw CollaborationError.invalid("Shared source saving is disabled. Enable changes to shared Markdown files in Shared review to save this source.") }
         begin(); let token = generation; defer { end() }
         do {
             let outcome = try await run { try $0.saveSource(document, baseline: baseline, draft: draft, trigger: triggerEventID) }
@@ -650,7 +690,7 @@ private final class CollaborationWorkspaceWorker: @unchecked Sendable {
         if let failure = failure as? CollaborationError {
             switch failure {
             case .identityConflict: status = .identityConflict; error = "Workspace or document identity conflicts. Choose Reconnect; existing files were kept."
-            case .capacityExceeded: status = .capacityExceeded; error = "This workspace exceeds the pilot limits. Export local evidence and use a smaller disposable workspace."
+            case .capacityExceeded: status = .capacityExceeded; error = "This workspace exceeds the supported limits. Export local evidence and use a smaller workspace."
             case .invalid(let message): status = .unavailable; error = message
             default: status = .unavailable; error = "The shared folder is unavailable. Retry or reconnect; the last readable review is retained."
             }

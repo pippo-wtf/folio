@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import ReaderCore
 
-/// Minimal Staging onboarding/workspace controls. Uses the reader's actual palette.
+/// Shared review workspace controls. Uses the reader's actual palette.
 struct SharedFolderSheet: View {
     @ObservedObject var coordinator: CollaborationCoordinator
     @ObservedObject var model: ReaderModel
@@ -31,7 +31,7 @@ struct SharedFolderSheet: View {
             if coordinator.workspaceID == nil {
                 ReviewTabs(label: "Workspace", selection: $create,
                            options: [(false, "Join existing"), (true, "Create once")], ink: ink, accent: accent)
-                Text(create ? "Choose a disposable pilot folder. Folio adds metadata only when ‘Folio Review’ is absent." : "Join after OneDrive delivers ‘Folio Review/workspace.json’ from the creator.")
+                Text(create ? "Choose an already shared folder. Folio adds a ‘Folio Review’ folder for comments and task history." : "Join after OneDrive delivers ‘Folio Review/workspace.json’ from the creator.")
                     .font(.caption)
                 Button("Choose OneDrive folder…") { chooseFolder(reconnect: false) }
                     .disabled(!validName || coordinator.busy)
@@ -74,9 +74,9 @@ struct SharedFolderSheet: View {
                         if reconnectID != nil { Button("Cancel reconnect") { reconnectID = nil } }
                     }
                 }
-                Toggle("Enable guarded source saves for this disposable pilot", isOn: $coordinator.sourceSavingEnabled)
+                Toggle("Allow changes to shared Markdown files", isOn: $coordinator.sourceSavingEnabled)
                     .disabled(coordinator.sourceAccessUnverified || coordinator.busy)
-                Text("At most 8 registered documents. This Staging pilot retains source versions locally before saving. Two-Mac recovery acceptance is still required.")
+                Text("Up to 8 documents per workspace. Folio keeps recovery copies before saving and asks you to resolve conflicting edits.")
                     .font(.caption).foregroundStyle(ink.opacity(0.7))
                 HStack {
                     Button("Retry") { Task { await coordinator.refresh() } }
@@ -101,7 +101,7 @@ struct SharedFolderSheet: View {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false
         panel.prompt = reconnect ? "Reconnect" : "Choose folder"
-        panel.message = "Choose the already shared OneDrive pilot folder. Folio does not grant access or invite anyone."
+        panel.message = "Choose the already shared OneDrive folder. Folio does not grant access or invite anyone."
         guard panel.runModal() == .OK, let url = panel.url else { return }
         Task {
             if reconnect { await coordinator.reconnectFolder(url) }
