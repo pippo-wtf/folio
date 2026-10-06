@@ -113,7 +113,7 @@ final class ContextualSelectionRendererTests: XCTestCase {
         defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
         try await installReaderCSS(view)
         _ = try await view.evaluateJavaScript("Folio.appearance('dark',1,{}); Folio.render('Original.','','current',[{id:'private',start:0,quote:'Original',prefix:'',suffix:'.',comment:'Comment'}],true,null,false); Folio.openPrivateComment('current','private'); void 0")
-        let dark = try await view.evaluateJavaScript("({paper:getComputedStyle(document.getElementById('review-popover')).backgroundColor,ink:getComputedStyle(document.getElementById('review-popover')).color,accent:getComputedStyle(document.querySelector('#review-popover blockquote')).borderLeftColor,radius:getComputedStyle(document.getElementById('review-popover')).borderRadius,shadow:getComputedStyle(document.getElementById('review-popover')).boxShadow,fieldBorder:getComputedStyle(document.querySelector('#review-popover textarea')).borderColor,focusOffset:getComputedStyle(document.querySelector('#review-popover textarea')).outlineOffset})") as! [String: Any]
+        let dark = try await view.evaluateJavaScript("({paper:getComputedStyle(document.getElementById('review-popover')).backgroundColor,ink:getComputedStyle(document.getElementById('review-popover')).color,accent:getComputedStyle(document.querySelector('#review-popover blockquote')).borderLeftColor,radius:getComputedStyle(document.getElementById('review-popover')).borderRadius,shadow:getComputedStyle(document.getElementById('review-popover')).boxShadow,fieldBorder:getComputedStyle(document.querySelector('#review-popover .review-composer')).borderColor,focusOutline:getComputedStyle(document.querySelector('#review-popover textarea')).outlineStyle})") as! [String: Any]
         XCTAssertEqual(dark["paper"] as? String, "rgb(23, 23, 23)")
         XCTAssertEqual(dark["ink"] as? String, "rgb(233, 233, 233)")
         XCTAssertEqual(dark["accent"] as? String, "rgb(255, 155, 84)")
@@ -148,9 +148,9 @@ final class ContextualSelectionRendererTests: XCTestCase {
         let focused = try await view.evaluateJavaScript("document.querySelector('#review-popover textarea').focus({preventScroll:true}); ({focused:document.activeElement===document.querySelector('#review-popover textarea'),matches:document.querySelector('#review-popover textarea').matches(':focus'),hidden:document.getElementById('review-popover').hidden})") as! [String: Any]
         XCTAssertEqual(focused["focused"] as? Bool, true, "Composer must own focus before testing focus CSS: \(focused)")
         XCTAssertEqual(focused["matches"] as? Bool, true, "Composer must match :focus before testing focus CSS: \(focused)")
-        let dark = try await view.evaluateJavaScript("({fieldBorder:getComputedStyle(document.querySelector('#review-popover textarea')).borderColor,focusOffset:getComputedStyle(document.querySelector('#review-popover textarea')).outlineOffset})") as! [String: Any]
+        let dark = try await view.evaluateJavaScript("({fieldBorder:getComputedStyle(document.querySelector('#review-popover .review-composer')).borderColor,focusOutline:getComputedStyle(document.querySelector('#review-popover textarea')).outlineStyle})") as! [String: Any]
         XCTAssertEqual(dark["fieldBorder"] as? String, "rgb(255, 155, 84)")
-        XCTAssertEqual(dark["focusOffset"] as? String, "-1px")
+        XCTAssertEqual(dark["focusOutline"] as? String, "none")
     }
 
 }

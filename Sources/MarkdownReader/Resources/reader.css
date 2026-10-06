@@ -231,11 +231,16 @@ eqn{display:block;margin:1.6em 0;text-align:center;overflow:auto}
 .review-messages{max-height:220px;overflow:auto;overscroll-behavior:contain}
 .review-messages article{padding:10px 0;border-top:1px solid var(--line)}
 .review-messages small{display:block;opacity:.7}
-#review-popover textarea{display:block;box-sizing:border-box;width:100%;resize:vertical;min-height:70px;max-height:180px;margin-top:12px;border:1px solid var(--line);border-radius:0;padding:8px;background:var(--paper);color:var(--ink);font:inherit}
-#review-popover textarea:focus{border-color:var(--accent);outline:1px solid var(--accent);outline-offset:-1px}
-.review-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+#review-popover .review-composer{margin-top:18px;padding:14px;border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);border-radius:16px;background:color-mix(in srgb,var(--ink) 3.5%,transparent)}
+#review-popover textarea{display:block;box-sizing:border-box;width:100%;height:120px;resize:none;margin:0;border:0;border-radius:0;padding:8px 0;background:transparent;color:var(--ink);font:15px/1.45 var(--ui);caret-color:var(--accent)}
+#review-popover textarea::placeholder{color:color-mix(in srgb,var(--ink) 50%,transparent)}
+#review-popover textarea:focus{outline:none;box-shadow:none}
+#review-popover .review-composer:focus-within{border-color:var(--accent)}
+.review-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+#review-popover .review-actions button:not(.review-submit){padding:0;color:color-mix(in srgb,var(--ink) 65%,transparent)}
+#review-popover .review-submit{width:32px;height:32px;padding:0;border-radius:50%;font:600 21px/32px var(--ui);background:var(--accent);color:rgba(0,0,0,.85)}
 .review-actions span{font-size:10px;opacity:.65}
-#review-popover .review-actions button,#review-popover button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+#review-popover button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
 .review-reply{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
 .review-issue{border-left:2px solid var(--accent);padding-left:8px}
 .review-task-accessory{position:fixed;z-index:18;font:11px/1.4 var(--ui);background:var(--paper);border-left:2px solid var(--accent);padding:3px 6px}

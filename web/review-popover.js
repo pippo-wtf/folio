@@ -27,14 +27,15 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
  function errorText(value){if(value)panel.append(element('p',String(value),'review-issue'));}
  function header(label){const h=element('header');h.append(element('strong',label),button('Close',close));panel.append(h);}
  function composer(value,submit,onDraft,allowEmpty=false){
-  const field=element('textarea');field.rows=3;field.maxLength=20000;field.value=value;field.placeholder='Write a comment…';field.setAttribute('aria-label','Comment');
-  const actions=element('div',undefined,'review-actions'),save=button(active.kind==='private'?'Save comment':'Send',()=>{if(!save.disabled)submit(field.value);});
+  const field=element('textarea');field.rows=3;field.maxLength=20000;field.value=value;field.placeholder='Leave feedback for your agent…';field.setAttribute('aria-label','Comment');
+  const shell=element('div',undefined,'review-composer'),actions=element('div',undefined,'review-actions'),save=button('↑',()=>{if(!save.disabled)submit(field.value);});
+  save.className='review-submit';save.dataset.reviewSubmit='';save.setAttribute('aria-label',active.kind==='private'?'Save comment':'Send comment');save.title='Enter to save · Shift+Enter for a new line';
   function update(){save.disabled=active?.pending||context.busy||(!allowEmpty&&!field.value.trim());}
   field.addEventListener('input',()=>{onDraft(field.value);update();});
   field.addEventListener('compositionstart',()=>composing=true);field.addEventListener('compositionend',()=>{composing=false;});
   field.addEventListener('blur',()=>{if(active?.kind==='thread'&&active.needsDraw){active.needsDraw=false;drawThread();}});
   field.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing&&!composing&&event.keyCode!==229){event.preventDefault();if(!save.disabled)submit(field.value);}});
-  actions.append(element('span','Enter to send · Shift+Enter for a new line'),save);panel.append(field,actions);update();return field;
+  actions.append(button('Cancel',close),save);shell.append(field,actions);panel.append(shell);update();return field;
  }
  function drawThread(focus=false){
   const thread=context.threads.find(t=>t.id===active?.id);if(!thread){close();return;}
@@ -104,7 +105,7 @@ export function createReviewPopover(root,token,before,send,shared,privateInfo){
     const changed=oldShape!==JSON.stringify([context.threads,context.busy,context.issue]);
     if(composing||(field===doc.activeElement&&(!acknowledged||active.draft))){
      active.needsDraw=changed||active.needsDraw;
-     for(const b of panel.querySelectorAll('button'))if(b.textContent!=='Close')b.disabled=!writable()||(b.textContent==='Send'&&!active.draft.trim());
+     for(const b of panel.querySelectorAll('button'))if(b.textContent!=='Close')b.disabled=!writable()||(b.hasAttribute('data-review-submit')&&!active.draft.trim());
      let issue=panel.querySelector('.review-issue');if(!issue){issue=element('p',undefined,'review-issue');panel.append(issue);}issue.textContent=context.issue||'';
     }else if(changed||acknowledged)drawThread();
    }
