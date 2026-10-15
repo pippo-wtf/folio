@@ -1,6 +1,6 @@
 # Table width correction
 
-Installed locally in regular Folio 0.14.1, build 2026101501. Developer ID signed; not published or notarized as a new release.
+Installed locally in regular Folio 0.14.1, build 2026101501. Developer ID signed, Apple notarized and stapled. App, installer helper, nested payload and DMG pass Gatekeeper. Release receipt: `updates/release-0.14.1.json`.
 
 The previous request existed only as backlog ticket 9. Shipped CSS restricted tables to 100% and used overflow:auto. Native WebKit reproduced a table wider than its visible wrapper.
 
