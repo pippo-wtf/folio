@@ -5,7 +5,27 @@ import WebKit
 final class TableWidthTests: XCTestCase {
     @MainActor func testTablesExpandWithoutClippingInReadAndWrite() async throws {
         let cells = (0..<8).map { "[Column\($0)](https://example.com) `" + String(repeating: "long_identifier_", count: 5) + "`" }
-        let source = "# Heading\n\nNormal paragraph stays in the reading column.\n\n| " + (0..<8).map { "Column \($0)" }.joined(separator: " | ") + " |\n| " + Array(repeating: "---", count: 8).joined(separator: " | ") + " |\n| " + cells.joined(separator: " | ") + " |\n\n| Name | Status |\n| --- | --- |\n| Table editing | Available |\n\n```text\nCode stays in its column\n```\n"
+        let header = (0..<8).map { "Column \($0)" }.joined(separator: " | ")
+        let separator = Array(repeating: "---", count: 8).joined(separator: " | ")
+        let row = cells.joined(separator: " | ")
+        let source = """
+        # Heading
+
+        Normal paragraph stays in the reading column.
+
+        | \(header) |
+        | \(separator) |
+        | \(row) |
+
+        | Name | Status |
+        | --- | --- |
+        | Table editing | Available |
+
+        ```text
+        Code stays in its column
+        ```
+
+        """
         for editing in [false, true] {
             let (model, view, _) = try await CopyContentTests().web(source, editing: editing) { _ in true }
             defer { view.configuration.userContentController.removeScriptMessageHandler(forName: "folio") }
