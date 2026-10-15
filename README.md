@@ -8,7 +8,7 @@
 
 Read what your agent wrote. Mark what matters. Comment on what needs to change.
 
-**[Download for Mac](https://github.com/pippo-wtf/folio/releases/download/v0.14.0/Folio.dmg)** · [Features](#features) · [Installation](#installation)
+**[Download for Mac](https://github.com/pippo-wtf/folio/releases/download/v0.14.1/Folio.dmg)** · [Features](#features) · [Installation](#installation)
 
 Apple silicon · macOS 14+ · Free & open source
 
@@ -64,7 +64,7 @@ Available in regular Folio 0.14. Choose your name, then add an already shared On
 
 ### Download for Mac
 
-1. **[Download Folio.dmg](https://github.com/pippo-wtf/folio/releases/download/v0.14.0/Folio.dmg).**
+1. **[Download Folio.dmg](https://github.com/pippo-wtf/folio/releases/download/v0.14.1/Folio.dmg).**
 2. Open it and launch **Install Folio**. It installs into your personal **Applications** folder.
 3. Open Folio and choose a Markdown file.
 
