@@ -92,7 +92,7 @@ export function parse(markdown, assetPrefix='folio-asset://unavailable/', editin
   return `${preview}<section class="code-block"${t.meta?.complexId ? ` data-complex="${t.meta.complexId}"` : ''}><button class="code-copy" type="button" data-copy="${id}" aria-label="Copy code block">Copy</button><details class="source-details" open><summary><span>${md.utils.escapeHtml(language||'Text')}${fallback}</span></summary><pre tabindex="0" aria-label="Code"><code>${rendered}</code></pre></details></section>`;
  };
  const originalTableOpen=md.renderer.rules.table_open;
- md.renderer.rules.table_open=(tokens,idx,options,env,self)=>`<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"${tokens[idx].meta?.complexId ? ` data-complex="${tokens[idx].meta.complexId}"` : ''}>`+(originalTableOpen?originalTableOpen(tokens,idx,options,env,self):self.renderToken(tokens,idx,options));
+ md.renderer.rules.table_open=(tokens,idx,options,env,self)=>`<div class="table-scroll" tabindex="0" role="region" aria-label="Table"${tokens[idx].meta?.complexId ? ` data-complex="${tokens[idx].meta.complexId}"` : ''}>`+(originalTableOpen?originalTableOpen(tokens,idx,options,env,self):self.renderToken(tokens,idx,options));
  md.renderer.rules.table_close=()=>'</table></div>';
  const metadataHTML=metadata?`<details class="metadata"><summary>Document properties</summary><pre><code>${md.utils.escapeHtml(metadata[1])}</code></pre></details>`:'';
  const env={}, tokens=md.parse(markdown,env);
